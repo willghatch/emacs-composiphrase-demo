@@ -55,6 +55,25 @@ The extra key strokes are worth the extra command availability and fluency.
 
 For other thoughts about the overall idea, see the [announcement blog post](https://willghatch.net/blog/text-editing/composiphrase_composable-editing-language-like-vim-but-moreso/).
 
+## Install and run the demo
+
+### Install
+
+- install emacs, however you get it.  The Treesitter components need Emacs version 29, but probably everything else works with version 28, or even several versions lower probably.
+- clone this repository: `git clone https://github.com/willghatch/emacs-composiphrase-demo`
+- Enter the directory: `cd emacs-composiphrase-demo`
+- Read the install script: `cat install.el`
+  It installs some emacs packages in a sub directory.
+  I could instead have the init file install things on first run, but then startup is slow always.
+  I like a fast emacs startup.
+  Even if I do use the server and client setup sometimes to make it even faster.
+- Run the install script: `emacs -q -batch -l install.el`
+
+### Run
+
+- `emacs -q -l $COMPOSIPHRASE_DEMO_DIR/demo-init.el $FILE_TO_EDIT`
+- Maybe put that in an alias definition, and try using it for a day for your text editing.
+
 
 ## Limitations
 
@@ -994,25 +1013,6 @@ I haven't used the default mode line since approximately the first day I used em
 And since my mode line looks terrible without my theme...
 Well there you go.
 You're welcome or I'm sorry, depending on how you feel about my visual aesthetic choices.
-
-## Install and run the demo
-
-### Install
-
-- install emacs, however you get it.  The Treesitter components need Emacs version 29, but probably everything else works with version 28, or even several versions lower probably.
-- clone this repository: `git clone https://github.com/willghatch/emacs-composiphrase-demo`
-- Enter the directory: `cd emacs-composiphrase-demo`
-- Read the install script: `cat install.el`
-  It installs some emacs packages in a sub directory.
-  I could instead have the init file install things on first run, but then startup is slow always.
-  I like a fast emacs startup.
-  Even if I do use the server and client setup sometimes to make it even faster.
-- Run the install script: `emacs -q -batch -l install.el`
-
-### Run
-
-- `emacs -q -l $COMPOSIPHRASE_DEMO_DIR/demo-init.el $FILE_TO_EDIT`
-- Maybe put that in an alias definition, and try using it for a day for your text editing.
 
 ## The end
 
