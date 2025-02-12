@@ -1014,6 +1014,13 @@ And since my mode line looks terrible without my theme...
 Well there you go.
 You're welcome or I'm sorry, depending on how you feel about my visual aesthetic choices.
 
+## Related
+
+Some other systems that might be of interest:
+
+- [evil-mode](https://github.com/emacs-evil/evil) Very good Vim emulation in Emacs.  I tell people regularly that it is a better Vim than Vim.
+- [rigpa](https://github.com/countvajhula/rigpa) Modal editing, but more modal!  It is also compositional in the sense that it abstracts over similar operations, putting them on the same keys.  But the noun is typically implicit in the current mode.  Instead of one “normal” mode for commands, you have a tower of modes for different kinds of objects, and you move between the towers.  So compared to Composiphrase, with Rigpa you have shorter bindings but more state management.  Shoutout to Sid, Rigpa's author.  Rigpa and [symex.el](https://github.com/drym-org/symex.el) were influential in my thinking about Composiphrase.  (Also, the term “symex” is a better replacement for the terms “s-expression” or “sexp” as shorthand for “symbolic expression”.)
+
 ## The end
 
 This is basically as narrow of a demo as seemed good to present a competitor to vim.
