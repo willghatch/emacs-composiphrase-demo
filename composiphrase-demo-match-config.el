@@ -732,9 +732,8 @@
           ;; TODO - is there something useful to do for split for outline or indent tree?  For symex or XML it has obvious meaning, but is used in the middle of a thing.  Maybe for outline it means to split the parent on the current header, inserting a new header above at the parent level.  And similar for indent tree.  Need to implement this...
           ;; TODO - split for non-tree objects has reasonably defined meaning, I suppose, but isn't very interesting.
 
-          ;; TODO - I need to fix my join-line implementation to take a numerical argument
-          (join line ((direction forward)) (,(lambda () (join-line t))))
-          (join line ((direction backward)) (,(lambda () (join-line))))
+          (join line ((direction forward)) (,(lambda (count) (dotimes (i count) (join-line t))) (num)))
+          (join line ((direction backward)) (,(lambda (count) (dotimes (i count) (join-line))) (num)))
           (join cpo-smartparens ((direction backward)) (cpo-smartparens-join-sexp-backward (num)))
           (join cpo-smartparens ((direction forward)) (cpo-smartparens-join-sexp-forward (num)))
           ;; TODO - cpo-smartparens - make a join-sexp function that takes a forward or backward argument
