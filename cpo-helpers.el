@@ -284,7 +284,10 @@ Otherwise, start recording to the register 'estate-default-keyboard-macro-regist
        estate-default-keyboard-macro-register))))
 ;; TODO - probably use the character for default register a la vim, so it can still be selected by char.
 
-
+;; Temporary, maybe, just want for moving by hunk as vcs-change object, even if it only supports the most basic movement and not even selection.
+(with-eval-after-load 'repeatable-motion
+  (repeatable-motion-define-pair 'git-gutter:next-hunk
+                                 'git-gutter:previous-hunk))
 
 ;; TODO - not stuff to actually go in this file, but a checklist of things I want to replace evil-mode.  Note that many of these I can just fall back to requiring evil-mode and just using it...
 ;; * surround region - add delimiter

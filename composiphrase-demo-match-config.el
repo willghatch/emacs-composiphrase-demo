@@ -116,7 +116,7 @@
           (definition) ;; this could be defun in elisp, and hopefully for treesitter I can typically find a good node to make this go to.  How much do I want to lean in to different grammar nodes?  Eg. I'm pretty sure that I would like argument/parameter, maybe I want function definition, class definition, to select specific types of nested definitions.  Helix has objects for function, class/type, argument, comment, test, and change.  I should think about all of the different kinds of AST nodes that would be nice to target specifically.
           (comment)
           (buffer-change) ;; TODO - for going forward/back or selecting a change to the buffer.  This is probably complicated to set up, eg. requiring monitoring changes to offsets and syncing with undo.  May not be worth it.
-          (vcs-change) ;; TODO - eg. for going to next change or selecting change boundaries for changes since last git commit.
+          (vcs-change (default-verb . move)) ;; TODO - eg. for going to next change or selecting change boundaries for changes since last git commit.
           (linter-warning) ;; TODO - eg. to move to next compiler/linter warning/error or select its region
           (ai-proposed-edit) ;; TODO - eg. I'm thinking move to or select region of next proposed edit by an AI tool, eg. stuff like cursor compose edit proposals, only an editor-agnostic tool that can have some protocol for communicating edits so emacs can show them nicely.
           ;; TODO - it would be nice to have options for basically any kind of thing that can have its bounds given and can be searched for to move forward/backward to a next one.
@@ -159,6 +159,9 @@
                 (cpo-isearch-repeat-backward (num)))
           (move jump-to-register () ((lambda () (call-interactively 'jump-to-register)) ()))
 
+          ;; These git-gutter commands don't do everything I would like here, but they are close enough to include for now.
+          (move vcs-change ((direction forward)) (rmo/git-gutter:next-hunk (num)))
+          (move vcs-change ((direction backward)) (rmo/git-gutter:previous-hunk (num)))
 
           (move buffer
                 ((direction expand-region))
