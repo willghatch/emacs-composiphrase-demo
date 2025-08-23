@@ -165,6 +165,9 @@ The command also executes the sentence, with region as the object, if the region
 
 
 (emmap "v" 'estate-visual-state)
+(enmap "V" (lambda () (interactive)
+             (funcall (cp/add (cp/verb 'activate-visual-modifier-state)))
+             (cpo/object-select/body)))
 
 (emmap "q" 'estate-keyboard-macro-to-register-end-most-recent-or-start-default)
 (emmap "Q" 'estate-keyboard-macro-to-register-start)
