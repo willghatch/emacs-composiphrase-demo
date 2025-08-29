@@ -18,8 +18,8 @@
 (defvar-local estate--visual-modifier nil
   "Current visual region modifier. Either a function or (name-string function).")
 
-(defvar-local estate--visual-modifier-overlay nil
-  "Overlay showing the modified region boundaries.")
+(defvar-local estate--visual-modifier-overlays nil
+  "List of overlays showing the modified region boundaries.")
 
 (defvar-local estate--visual-region-expanded nil
   "Non-nil when the region has been expanded for a command.")
@@ -66,10 +66,10 @@ or MODIFIER should be a list like (list NAME-STRING MODIFIER-FUNCTION)."
     (remove-hook 'pre-command-hook 'estate--visual-pre-command t)
     (remove-hook 'post-command-hook 'estate--visual-post-command t)
 
-    ;; Clean up overlay
-    (when estate--visual-modifier-overlay
-      (delete-overlay estate--visual-modifier-overlay)
-      (setq-local estate--visual-modifier-overlay nil))
+    ;; Clean up overlays
+    (dolist (overlay estate--visual-modifier-overlays)
+      (delete-overlay overlay))
+    (setq-local estate--visual-modifier-overlays nil)
 
     ;; Reset expansion state
     (setq-local estate--visual-region-expanded nil)
@@ -108,16 +108,26 @@ Uses caching to avoid recomputing the modifier function multiple times."
   "Update the overlay showing modified region boundaries."
   (when estate--visual-modifier
     (when-let ((modified-region (estate--visual-get-modified-region)))
-      (let ((beg (car modified-region))
-            (end (cadr modified-region)))
-
-        ;; Create or update overlay
-        (unless estate--visual-modifier-overlay
-          (setq-local estate--visual-modifier-overlay (make-overlay beg end)))
-
-        (move-overlay estate--visual-modifier-overlay beg end)
-        (overlay-put estate--visual-modifier-overlay 'face 'estate-visual-modifier-expanded-region-face)
-        (overlay-put estate--visual-modifier-overlay 'priority 100)))))
+      (let ((mod-beg (car modified-region))
+            (mod-end (cadr modified-region))
+            (orig-beg (region-beginning))
+            (orig-end (region-end)))
+        ;; Clean up existing overlays
+        (dolist (overlay estate--visual-modifier-overlays)
+          (delete-overlay overlay))
+        (setq-local estate--visual-modifier-overlays nil)
+        ;; Create overlays for extended areas only
+        (when (or (< mod-beg orig-beg) (> mod-end orig-end))
+          (let ((overlay-ranges '()))
+            (when (< mod-beg orig-beg)
+              (push (cons mod-beg orig-beg) overlay-ranges))
+            (when (> mod-end orig-end)
+              (push (cons orig-end mod-end) overlay-ranges))
+            (dolist (range overlay-ranges)
+              (let ((overlay (make-overlay (car range) (cdr range))))
+                (overlay-put overlay 'face 'estate-visual-modifier-expanded-region-face)
+                (overlay-put overlay 'priority 100)
+                (push overlay estate--visual-modifier-overlays)))))))))
 
 (defvar estate-visual-modifier-expansion-command-predicate nil
   "Function to determine if a command should expand the region.
