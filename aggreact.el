@@ -54,6 +54,17 @@ The command group is a list of alists, where each alist contains details of a co
 This is useful to eg. keep histories of commands with interesting properties.
 ")
 
+(defvar aggreact-explicit-repeat-command nil
+  "Command to use for explicit repeat splitting.
+When non-nil, this forces aggreact to ignore the predicate and do the split.
+The command group will be annotated with an explicit-repeat-command field
+containing this command.  This variable is typically nil, but can be set by
+commands to force splitting.
+
+When using this to explicitly split a group, the actual group is ignored and
+this command is used for repetition instead.
+")
+
 (defun aggreact--post-command ()
   (let* ((new-command-details
           `((command . ,this-command)
@@ -73,15 +84,24 @@ This is useful to eg. keep histories of commands with interesting properties.
                       aggreact-command-history-enrichment-functions
                       new-command-details))
     (setq aggreact--current-groups (cons new-command-details aggreact--current-groups))
-    (when (if aggreact-command-group-split-predicate
-              (funcall aggreact-command-group-split-predicate aggreact--current-groups)
-            t)
-      (let ((finalized-group (reverse aggreact--current-groups)))
-        (setq aggreact--current-groups nil)
-        (with-demoted-errors
-            "error during aggreact-command-group-split-functions: %s"
-          (mapcar (lambda (func) (funcall func finalized-group))
-                  aggreact-command-group-split-functions))))))
+    (let ((should-split
+           (or aggreact-explicit-repeat-command
+               (if aggreact-command-group-split-predicate
+                   (funcall aggreact-command-group-split-predicate aggreact--current-groups)
+                 t)))
+          (explicit-repeat-cmd aggreact-explicit-repeat-command))
+      (when should-split
+        (let ((finalized-group (reverse aggreact--current-groups)))
+          (when explicit-repeat-cmd
+            (setcar finalized-group
+                    (cons `(explicit-repeat-command . ,explicit-repeat-cmd)
+                          (car finalized-group)))
+            (setq aggreact-explicit-repeat-command nil))
+          (setq aggreact--current-groups nil)
+          (with-demoted-errors
+              "error during aggreact-command-group-split-functions: %s"
+            (mapcar (lambda (func) (funcall func finalized-group))
+                    aggreact-command-group-split-functions)))))))
 
 (defun aggreact--get-keys-for-command-group (command-group)
   "Return the raw keys used for the entire COMMAND-GROUP as a flat vector."
@@ -93,8 +113,21 @@ This is useful to eg. keep histories of commands with interesting properties.
 (defun aggreact-execute-command-group-as-keyboard-macro (command-group)
   "Use the recorded keys of COMMAND-GROUP to execute as keyboard macro.
 This may cause issues if not run in a state where the keys will do the same thing...
+If the command group has an explicit-repeat-command field, execute that command instead.
 "
-  (execute-kbd-macro (aggreact--get-keys-for-command-group command-group)))
+  (let ((explicit-repeat-cmd (cdr (assq 'explicit-repeat-command (car command-group)))))
+    (if explicit-repeat-cmd
+        (funcall explicit-repeat-cmd)
+      (execute-kbd-macro (aggreact--get-keys-for-command-group command-group)))))
+
+(defun aggreact-make-explicit-command (command-func)
+  "Takes a command func (symbol or closure) and returns a closure that when called:
+* explicitly sets the aggreact last command to be a fresh closure that calls the given command with its current arguments
+* and calls the command."
+  (lambda (&rest args)
+    (setq aggreact-explicit-repeat-command
+          (lambda () (apply command-func args)))
+    (apply command-func args)))
 
 (setq aggreact--this-command-all-keys-mode-state-before-aggreact nil)
 
