@@ -127,7 +127,7 @@
           (phone-number)
           (tracking-number)
           (file-name (default-verb . move))
-          (date-yyyy-mm-dd (default-verb . move))
+          (date-yyyy-mm-dd (default-verb . move) (location-within . beginning))
           ;; TODO - I want modifiers for respecting or not respecting tree bounds.  Eg. I typically want go-to-sibling for tree things that don't go out to cousin nodes.  But sometimes it is convenient to just go to the start of the next thing not caring about tree siblings.  But maybe most of the places where I want to disrespect trees are for specific kinds of nodes.  Eg. I want a convenient “go to next/prev function definition”, but I rarely want “go to next expression disregarding tree shape”, or “go to next argument” that goes out to some other function call.
           ;; TODO - I want some modifier to go to a tree node with a given tag.  Eg. this could be a lisp form that starts with a particular symbol, or a specific xml tag, or a treesitter node of particular type.  For org-mode or cpo-indent-tree it could be a particular indentation depth or something that I can match about the header or line.
           ))
@@ -688,6 +688,29 @@
           (move email ((direction backward) (location-within end))
                 (rmo/cpo-backward-email-end (num)))
 
+          (move date-yyyy-mm-dd ((direction expand-region) (alternate ,nil))
+                (cpo-expand-region-to-cpo-date))
+          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate ,nil))
+                (rmo/cpo-forward-date-beginning (num)))
+          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate ,nil))
+                (rmo/cpo-backward-date-beginning (num)))
+          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate ,nil))
+                (rmo/cpo-forward-date-end (num)))
+          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate ,nil))
+                (rmo/cpo-backward-date-end (num)))
+
+          ;; Date-time configurations - use alternate modifier to select datetime instead of date
+          (move date-yyyy-mm-dd ((direction expand-region) (alternate alternate))
+                (cpo-expand-region-to-cpo-datetime))
+          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate alternate))
+                (rmo/cpo-forward-datetime-beginning (num)))
+          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate alternate))
+                (rmo/cpo-backward-datetime-beginning (num)))
+          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate alternate))
+                (rmo/cpo-forward-datetime-end (num)))
+          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate alternate))
+                (rmo/cpo-backward-datetime-end (num)))
+
           ;; TODO - for transpose character, implement something that follows the character explicitly forward/backward.
           (transpose word ((direction forward)) (,(aggreact-make-explicit-command 'cpo-transpose-word-forward) (num)))
           (transpose word ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-word-backward) (num)))
@@ -709,6 +732,10 @@
           (transpose url ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-url-backward) (num)))
           (transpose email ((direction forward)) (,(aggreact-make-explicit-command 'cpo-transpose-email-forward) (num)))
           (transpose email ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-email-backward) (num)))
+          (transpose date-yyyy-mm-dd ((direction forward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-forward) (num)))
+          (transpose date-yyyy-mm-dd ((direction backward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-backward) (num)))
+          (transpose date-yyyy-mm-dd ((direction forward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-forward) (num)))
+          (transpose date-yyyy-mm-dd ((direction backward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-backward) (num)))
           (transpose cpo-smartparens ((tree-vertical up)) (cpo-smartparens-ancestor-reorder (num)))
           (transpose cpo-smartparens ((tree-vertical ,nil) (direction forward)) (,(aggreact-make-explicit-command 'cpo-smartparens-transpose-sibling-forward) (num)))
           (transpose cpo-smartparens ((tree-vertical ,nil) (direction backward)) (,(aggreact-make-explicit-command 'cpo-smartparens-transpose-sibling-backward) (num)))
@@ -936,7 +963,6 @@
           ;;                   (,(composiphrase--make-movement-delegated-command 'cpo-isearch-forward-for-text-in-region)
           ;;                    sentence-with-defaults))
 
-          ;; TODO - add some regex-based date and date-time movement and selection functions
           (open date-yyyy-mm-dd ((alternate ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d"))) ()))
           (open date-yyyy-mm-dd ((alternate alternate)) (,(lambda () (insert (format-time-string "%Y-%m-%d %H:%M:%S"))) ()))
 
