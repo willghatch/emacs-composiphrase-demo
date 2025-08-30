@@ -14,6 +14,11 @@
 (defvar cpd--estate-visual-modifier-advice-active nil
   "Non-nil when the composiphrase advice for estate visual modifier is active.")
 
+(defvar cpd--estate-visual-modifier-composiphrase-modification-functions
+  (make-hash-table :test 'eq :weakness 'key)
+  "Weak hash table tracking functions that modify composiphrase sentences.
+Keys are function objects, values are t.")
+
 (defun cpd--composiphrase-execute-advice (orig-fun sentence config)
   "Advice wrapper for composiphrase-execute to trigger region expansion for non-movement commands."
   (let* ((verb-word (seq-find (lambda (word) (eq 'verb (cdr (assq 'word-type word))))
@@ -25,15 +30,38 @@
     ;; If not a movement command, expand region.  If it is a movement, disable the hooks for deactivating visual mode based on mark state
     (unless is-movement
       (estate-visual-modifier-expand-region))
-    ;; Call original function
     (funcall orig-fun sentence config)))
 
 (defun cpd--remove-estate-visual-modifier-advice ()
   "Remove the composiphrase advice and this function from the exit hook."
   (when cpd--estate-visual-modifier-advice-active
     (advice-remove 'composiphrase-execute 'cpd--composiphrase-execute-advice)
+    (advice-remove 'composiphrase-add-to-current-sentence-with-numeric-handling 'cpd--composiphrase-add-to-sentence-advice)
     (setq cpd--estate-visual-modifier-advice-active nil))
   (remove-hook 'estate-visual-state-exit-hook 'cpd--remove-estate-visual-modifier-advice))
+
+(defun cpd--composiphrase-add-to-sentence-advice (orig-fun exec-after-p &rest words)
+  "Advice to track functions created by composiphrase-add-to-current-sentence-with-numeric-handling."
+  (let ((result (apply orig-fun exec-after-p words)))
+    (when (functionp result)
+      (puthash result t cpd--estate-visual-modifier-composiphrase-modification-functions))
+    result))
+;; This advice has to be loaded before I bind the keys and create all of these lambdas.
+(advice-add 'composiphrase-add-to-current-sentence-with-numeric-handling :around 'cpd--composiphrase-add-to-sentence-advice)
+
+(defun cpd--estate-visual-modifier-expansion-predicate (command)
+  "Predicate to determine if COMMAND should expand the region.
+Returns non-nil for non-composiphrase commands when no composiphrase sentence is active,
+but returns nil for composiphrase-execute-current-sentence (which uses the advice instead).
+
+This is a bit of a hack, but I want this to start working and this was the best thing I came up with.  In practice, this is the only way I modify the current sentence.
+"
+  (and (null composiphrase-current-sentence)
+       (not (eq command 'composiphrase-execute-current-sentence))
+       (not (gethash command cpd--estate-visual-modifier-composiphrase-modification-functions))))
+
+(setq estate-visual-modifier-expansion-command-predicate
+      'cpd--estate-visual-modifier-expansion-predicate)
 
 (defun cpd--activate-estate-visual-modifier-hook ()
   "Activate the advice wrapper and set up cleanup on visual state exit."
