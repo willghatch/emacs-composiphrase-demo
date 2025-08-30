@@ -36,6 +36,9 @@
 (defvar-local estate--visual-cached-region-input nil
   "The (beg . end) input used to compute the cached modified region.")
 
+(defvar-local estate--visual-command-modified-buffer nil
+  "Non-nil if the current command has modified the buffer.")
+
 (defun estate-visual-state-activate-modifier (modifier)
   "Activate a visual state region modifier.
 MODIFIER should be either a function like (mod-func region-beginning region-end) -> (list modified-region-beginning modified-region-end),
@@ -48,6 +51,7 @@ or MODIFIER should be a list like (list NAME-STRING MODIFIER-FUNCTION)."
   ;; Install hooks for region modification
   (add-hook 'pre-command-hook 'estate--visual-pre-command nil t)
   (add-hook 'post-command-hook 'estate--visual-post-command nil t)
+  (add-hook 'after-change-functions 'estate--visual-after-change nil t)
 
   ;; Update the overlay to show modified region
   (estate--visual-update-modifier-overlay))
@@ -65,18 +69,17 @@ or MODIFIER should be a list like (list NAME-STRING MODIFIER-FUNCTION)."
     ;; Remove hooks
     (remove-hook 'pre-command-hook 'estate--visual-pre-command t)
     (remove-hook 'post-command-hook 'estate--visual-post-command t)
+    (remove-hook 'after-change-functions 'estate--visual-after-change t)
 
-    ;; Clean up overlays
+    (setq-local estate--visual-command-modified-buffer nil)
+    (setq-local estate--visual-region-expanded nil)
+    (setq-local estate--visual-original-mark nil)
+    (setq-local estate--visual-original-point nil)
     (dolist (overlay estate--visual-modifier-overlays)
       (delete-overlay overlay))
     (setq-local estate--visual-modifier-overlays nil)
-
-    ;; Reset expansion state
     (setq-local estate--visual-region-expanded nil)
-
-    ;; Clear cache
-    (setq-local estate--visual-cached-modified-region nil)
-    (setq-local estate--visual-cached-region-input nil)))
+    (estate--visual-clear-cache)))
 
 (defun estate--visual-get-modifier-function ()
   "Get the modifier function from the current modifier."
@@ -164,8 +167,14 @@ be determined as non-movement commands during pre-command hook.
 The post-command hook will still clean up properly."
   (estate--visual-do-region-expansion))
 
+(defun estate--visual-after-change (beg end len)
+  "Hook run after buffer changes to track modifications during commands."
+  (setq-local estate--visual-command-modified-buffer t))
+
 (defun estate--visual-pre-command ()
   "Hook run before each command in visual state with active modifier."
+  ;; Reset the modification flag at the start of each command
+  (setq-local estate--visual-command-modified-buffer nil)
   (when (and estate-visual-modifier-expansion-command-predicate
              (funcall estate-visual-modifier-expansion-command-predicate this-command))
     (estate--visual-do-region-expansion)))
@@ -174,10 +183,18 @@ The post-command hook will still clean up properly."
   "Hook run after each command in visual state with active modifier."
   (when (and estate--visual-modifier (eq estate-state 'visual))
     (cond
-     ;; Contract region back after non-movement command
+     (estate--visual-command-modified-buffer
+      ;; If the buffer was modified by the last command but visual state is still active,
+      ;; then a modification command explicitly left the region active.  However, the
+      ;; old region that we have stored is probably no longer valid.  The
+      ;; buffer-modifying command would have left the region active in a correct
+      ;; place for its operation that would have used the expanded bounds.  So
+      ;; we will keep those bounds and deactivate the visual modifier.
+      (estate-visual-state-deactivate-modifier))
      ((and estate--visual-region-expanded
            estate--visual-original-mark
            estate--visual-original-point)
+      ;; Contract region back after non-movement command
       (goto-char estate--visual-original-point)
       (set-mark estate--visual-original-mark)
       (setq-local estate--visual-region-expanded nil)
@@ -185,9 +202,8 @@ The post-command hook will still clean up properly."
       (setq-local estate--visual-original-point nil)
       (estate--visual-clear-cache)
       (estate--visual-update-modifier-overlay))
-
-     ;; Update overlay for movement commands
      ((region-active-p)
+      ;; Update overlay for movement commands
       (estate--visual-update-modifier-overlay)))))
 
 ;; Hook into visual state exit to clean up modifier
