@@ -112,14 +112,13 @@
           ;;;;;
           ;; TODO - some objects that I don't really have anything implemented for, but that I want.
           ;;;;;
-          (treesitter) ;; TODO - I probably want some modifiers or alternate objects for various things within tree-sitter, to target specific nodes or families of nodes.  Eg. I want to be able to select operators but also use having the cursor at an operator as an anchor point to mean that it handles the tree for that operator, and I want to be able to select a function name and argument list both, but also the overall function call node, etc.  Maybe I should use a symbol or identifier object for operators and function names, while making the overall tree object at those points operate on the larger parse nodes those points represent?  Or maybe to select a function arg list, I should use the smartparens object, but making the treesitter object on the parens mean the function call.  Probably using the parens as the call anchor point is best, since higher-order calls and bracket indexing can lead to multiple levels of application and index nodes for a single function name.
           (xml-tag)
           (xml (default-verb . move) (location-within . beginning))
           (json) ;; Do I care about json outside of other things that already handle it?  Eg. smartparens does a good job with it, if not perfect, and treesitter probably does a good job.  But maybe I could improve handling of eg. commas with slurp/barf if I have a json-specific object.
           (white-space)
           (function-arg)
-          (definition) ;; this could be defun in elisp, and hopefully for treesitter I can typically find a good node to make this go to.  How much do I want to lean in to different grammar nodes?  Eg. I'm pretty sure that I would like argument/parameter, maybe I want function definition, class definition, to select specific types of nested definitions.  Helix has objects for function, class/type, argument, comment, test, and change.  I should think about all of the different kinds of AST nodes that would be nice to target specifically.
-          (comment)
+          (definition (default-verb . move) (respect-tree . ,nil)) ;; this could be defun in elisp, and hopefully for treesitter I can typically find a good node to make this go to.  How much do I want to lean in to different grammar nodes?  Eg. I'm pretty sure that I would like argument/parameter, maybe I want function definition, class definition, to select specific types of nested definitions.  Helix has objects for function, class/type, argument, comment, test, and change.  I should think about all of the different kinds of AST nodes that would be nice to target specifically.
+          (comment (default-verb . move) (respect-tree . ,nil)) ;; TODO - probably default to using treesitter for this, but maybe for buffers where treesitter is not active fall back to some method using the syntax highlighting engine or something.
           (buffer-change) ;; TODO - for going forward/back or selecting a change to the buffer.  This is probably complicated to set up, eg. requiring monitoring changes to offsets and syncing with undo.  May not be worth it.
           (vcs-change (default-verb . move)) ;; TODO - eg. for going to next change or selecting change boundaries for changes since last git commit.
           (linter-warning) ;; TODO - eg. to move to next compiler/linter warning/error or select its region
@@ -127,8 +126,8 @@
           ;; TODO - it would be nice to have options for basically any kind of thing that can have its bounds given and can be searched for to move forward/backward to a next one.
           (phone-number)
           (tracking-number)
-          (file-name)
-          (date-yyyy-mm-dd)
+          (file-name (default-verb . move))
+          (date-yyyy-mm-dd (default-verb . move))
           ;; TODO - I want modifiers for respecting or not respecting tree bounds.  Eg. I typically want go-to-sibling for tree things that don't go out to cousin nodes.  But sometimes it is convenient to just go to the start of the next thing not caring about tree siblings.  But maybe most of the places where I want to disrespect trees are for specific kinds of nodes.  Eg. I want a convenient “go to next/prev function definition”, but I rarely want “go to next expression disregarding tree shape”, or “go to next argument” that goes out to some other function call.
           ;; TODO - I want some modifier to go to a tree node with a given tag.  Eg. this could be a lisp form that starts with a particular symbol, or a specific xml tag, or a treesitter node of particular type.  For org-mode or cpo-indent-tree it could be a particular indentation depth or something that I can match about the header or line.
           ))
@@ -937,6 +936,20 @@
           ;;                   (,(composiphrase--make-movement-delegated-command 'cpo-isearch-forward-for-text-in-region)
           ;;                    sentence-with-defaults))
 
+          ;; TODO - add some regex-based date and date-time movement and selection functions
+          (open date-yyyy-mm-dd ((alternate ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d"))) ()))
+          (open date-yyyy-mm-dd ((alternate alternate)) (,(lambda () (insert (format-time-string "%Y-%m-%d %H:%M:%S"))) ()))
+
+          ;; Action verb matchers
+          (action url () (browse-url-at-point ()))
+          (action outline () (org-todo ()))
+          ;; Treesitter's action being lsp-execute-code-action might be a bit of a stretch... but somehow it seems fitting to me.  Treesitter is separate from the LSP, but both use language-specific analysis, and I'm not sure what else a generic action for treesitter might be.
+          (action cpo-treesitter-qd () (,(lambda () (call-interactively 'lsp-execute-code-action)) ()))
+          ;; TODO - this should be generalized to looking up docs for any language based on the current buffer.
+          (action symbol () (,(lambda () (describe-symbol (symbol-at-point))) ()))
+          (action file-name () (ffap ()))
+          (action vcs-change () (magit-stage ()))
+          ;; TODO - what other actions?  Maybe word could open a dictionary / thesauarus.  Smartparens could maybe be eval-last-sexp, except that I would want it to be eval-sp-sexp-at-point, and I haven't written that.
 
           ))))
 
