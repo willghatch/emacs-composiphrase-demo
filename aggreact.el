@@ -54,6 +54,10 @@ The command group is a list of alists, where each alist contains details of a co
 This is useful to eg. keep histories of commands with interesting properties.
 ")
 
+(defvar aggreact-inhibit-recording nil
+  "When non-nil, inhibit recording of commands and setting explicit repeat commands.
+This should be set during replay to prevent re-entrant recording.")
+
 (defvar aggreact-explicit-repeat-command nil
   "Command to use for explicit repeat splitting.
 When non-nil, this forces aggreact to ignore the predicate and do the split.
@@ -66,42 +70,43 @@ this command is used for repetition instead.
 ")
 
 (defun aggreact--post-command ()
-  (let* ((new-command-details
-          `((command . ,this-command)
-            ;; TODO - command arguments
-            (keys-vectors . ,(this-command-all-keys 'tck t))
-            (single-keys-vectors . ,(this-command-all-keys 'single t))
-            (raw-keys-vectors . ,(this-command-all-keys 'raw t)))))
-    (setq new-command-details
-          (seq-reduce (lambda (accum enrich-func)
-                        (let ((enrich-result
-                               (with-demoted-errors
-                                   "error during command history enrichment: %s"
-                                 (funcall enrich-func accum))))
-                          (if enrich-result
-                              (append enrich-result accum)
-                            accum)))
-                      aggreact-command-history-enrichment-functions
-                      new-command-details))
-    (setq aggreact--current-groups (cons new-command-details aggreact--current-groups))
-    (let ((should-split
-           (or aggreact-explicit-repeat-command
-               (if aggreact-command-group-split-predicate
-                   (funcall aggreact-command-group-split-predicate aggreact--current-groups)
-                 t)))
-          (explicit-repeat-cmd aggreact-explicit-repeat-command))
-      (when should-split
-        (let ((finalized-group (reverse aggreact--current-groups)))
-          (when explicit-repeat-cmd
-            (setcar finalized-group
-                    (cons `(explicit-repeat-command . ,explicit-repeat-cmd)
-                          (car finalized-group)))
-            (setq aggreact-explicit-repeat-command nil))
-          (setq aggreact--current-groups nil)
-          (with-demoted-errors
-              "error during aggreact-command-group-split-functions: %s"
-            (mapcar (lambda (func) (funcall func finalized-group))
-                    aggreact-command-group-split-functions)))))))
+  (unless aggreact-inhibit-recording
+    (let* ((new-command-details
+            `((command . ,this-command)
+              ;; TODO - command arguments
+              (keys-vectors . ,(this-command-all-keys 'tck t))
+              (single-keys-vectors . ,(this-command-all-keys 'single t))
+              (raw-keys-vectors . ,(this-command-all-keys 'raw t)))))
+      (setq new-command-details
+            (seq-reduce (lambda (accum enrich-func)
+                          (let ((enrich-result
+                                 (with-demoted-errors
+                                     "error during command history enrichment: %s"
+                                   (funcall enrich-func accum))))
+                            (if enrich-result
+                                (append enrich-result accum)
+                              accum)))
+                        aggreact-command-history-enrichment-functions
+                        new-command-details))
+      (setq aggreact--current-groups (cons new-command-details aggreact--current-groups))
+      (let ((should-split
+             (or aggreact-explicit-repeat-command
+                 (if aggreact-command-group-split-predicate
+                     (funcall aggreact-command-group-split-predicate aggreact--current-groups)
+                   t)))
+            (explicit-repeat-cmd aggreact-explicit-repeat-command))
+        (when should-split
+          (let ((finalized-group (reverse aggreact--current-groups)))
+            (when explicit-repeat-cmd
+              (setcar finalized-group
+                      (cons `(explicit-repeat-command . ,explicit-repeat-cmd)
+                            (car finalized-group)))
+              (setq aggreact-explicit-repeat-command nil))
+            (setq aggreact--current-groups nil)
+            (with-demoted-errors
+                "error during aggreact-command-group-split-functions: %s"
+              (mapcar (lambda (func) (funcall func finalized-group))
+                      aggreact-command-group-split-functions))))))))
 
 (defun aggreact--get-keys-for-command-group (command-group)
   "Return the raw keys used for the entire COMMAND-GROUP as a flat vector."
@@ -125,8 +130,9 @@ If the command group has an explicit-repeat-command field, execute that command 
 * explicitly sets the aggreact last command to be a fresh closure that calls the given command with its current arguments
 * and calls the command."
   (lambda (&rest args)
-    (setq aggreact-explicit-repeat-command
-          (lambda () (apply command-func args)))
+    (unless aggreact-inhibit-recording
+      (setq aggreact-explicit-repeat-command
+            (lambda () (apply command-func args))))
     (apply command-func args)))
 
 (setq aggreact--this-command-all-keys-mode-state-before-aggreact nil)

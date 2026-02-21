@@ -63,10 +63,25 @@
 (defun cp-demo-aggreact-repeat-latest-editing (&optional count)
   (interactive "p")
   (setq cp-demo--aggreact-repeat-active-p t)
+  (setq aggreact-inhibit-recording t)
   (let ((last-command (ring-ref cp-demo-aggreact--editing-groups-ring 0)))
-    (dotimes (i (or count 1))
-      (aggreact-execute-command-group-as-keyboard-macro last-command))
-    (setq cp-demo--aggreact-repeat-active-p nil)))
+    (unwind-protect
+        (dotimes (i (or count 1))
+          (aggreact-execute-command-group-as-keyboard-macro last-command))
+      ;; Don't reset flags here -- they must remain set when post-command-hook
+      ;; fires for THIS command, otherwise aggreact records the "." key itself
+      ;; into the ring, causing infinite recursion on next repeat.
+      ;; cp-demo-aggreact--post-repeat-cleanup handles the reset.
+      )))
+
+(defun cp-demo-aggreact--post-repeat-cleanup ()
+  "Reset repeat flags after aggreact--post-command has finished.
+This runs at depth 90 so it executes after aggreact--post-command (depth 0),
+ensuring the flags are still set when the split function checks them."
+  (when cp-demo--aggreact-repeat-active-p
+    (setq cp-demo--aggreact-repeat-active-p nil)
+    (setq aggreact-inhibit-recording nil)))
+(add-hook 'post-command-hook 'cp-demo-aggreact--post-repeat-cleanup 90)
 
 
 (provide 'composiphrase-estate-aggreact-config)
