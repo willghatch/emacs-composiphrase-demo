@@ -513,8 +513,8 @@ The command also executes the sentence, with region as the object, if the region
          (funcall (cp/ae (cp/obj 'line)) n))
    "line" :exit t)
   ;; TODO - consider whether to keep using this vi-like word, or the emacs word, or something else.  Also how to deal with sub-words in symbols.
-  ;;("w" (lambda (n) (interactive "p") (funcall (cp/ae (cp/obj 'cpo-vi-like-word)) n)) "vi-like-word" :exit t)
-  ("w" (lambda (n) (interactive "p")
+  ("w" (lambda (n) (interactive "p") (funcall (cp/ae (cp/obj 'cpo-vi-like-word)) n)) "vi-like-word" :exit t)
+  ("W" (lambda (n) (interactive "p")
          (funcall (cp/ae (cp/obj 'word)) n))
    "word" :exit t)
   ("y" (lambda (n) (interactive "p")
