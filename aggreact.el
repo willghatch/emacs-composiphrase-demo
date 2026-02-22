@@ -28,11 +28,25 @@
 
 ;; TODO - I have no idea what the minimum emacs version required here is.  It can probably work with much earlier versions.
 
-;; TODO - this is fundamentally broken when considering recursive editing.  I'll probably re-think how I'm doing this.
-
 (require 'this-command-all-keys)
 
 (setq aggreact--current-groups nil)
+
+(defvar aggreact--recording-baseline-depth 0
+  "The recursion depth at which normal recording occurs.
+Commands at deeper recursion depths are inside a recursive edit, and their
+keys are accumulated rather than recorded as separate commands.")
+
+(setq aggreact--recursive-edit-accumulated-tck-keys nil)
+(setq aggreact--recursive-edit-accumulated-single-keys nil)
+(setq aggreact--recursive-edit-accumulated-raw-keys nil)
+
+;; Saved keys from pre-command at baseline depth, used because
+;; recursive-edit clobbers this-command-keys with the last inner command's keys.
+(setq aggreact--pre-command-saved-tck nil)
+(setq aggreact--pre-command-saved-single nil)
+(setq aggreact--pre-command-saved-raw nil)
+(setq aggreact--pre-command-saved-command nil)
 
 (defvar aggreact-command-group-split-predicate nil
   "Predicate for when to split a command group.
@@ -69,44 +83,92 @@ When using this to explicitly split a group, the actual group is ignored and
 this command is used for repetition instead.
 ")
 
+(defun aggreact--pre-command ()
+  "Capture keys before each command runs.
+At baseline depth, save the command's keys so they survive recursive-edit
+\(which clobbers `this-command-keys' with the last inner command's values).
+At deeper depths, accumulate keys into the recursive-edit accumulators.
+Keys are captured in pre-command because `exit-recursive-edit' throws past
+post-command-hook, which would cause the exit key to be lost."
+  (when (not aggreact-inhibit-recording)
+    (if (> (recursion-depth) aggreact--recording-baseline-depth)
+        ;; Inside recursive edit: accumulate keys.
+        (with-demoted-errors "aggreact pre-command recursive key capture error: %s"
+          (push (this-command-keys) aggreact--recursive-edit-accumulated-tck-keys)
+          (push (this-single-command-keys) aggreact--recursive-edit-accumulated-single-keys)
+          (push (this-single-command-raw-keys) aggreact--recursive-edit-accumulated-raw-keys))
+      ;; At baseline depth: save keys for this command in case it enters
+      ;; recursive-edit (which clobbers this-command-keys).
+      (setq aggreact--pre-command-saved-tck (this-command-keys))
+      (setq aggreact--pre-command-saved-single (this-single-command-keys))
+      (setq aggreact--pre-command-saved-raw (this-single-command-raw-keys))
+      (setq aggreact--pre-command-saved-command this-command))))
+
 (defun aggreact--post-command ()
   (unless aggreact-inhibit-recording
-    (let* ((new-command-details
-            `((command . ,this-command)
-              ;; TODO - command arguments
-              (keys-vectors . ,(this-command-all-keys 'tck t))
-              (single-keys-vectors . ,(this-command-all-keys 'single t))
-              (raw-keys-vectors . ,(this-command-all-keys 'raw t)))))
-      (setq new-command-details
-            (seq-reduce (lambda (accum enrich-func)
-                          (let ((enrich-result
-                                 (with-demoted-errors
-                                     "error during command history enrichment: %s"
-                                   (funcall enrich-func accum))))
-                            (if enrich-result
-                                (append enrich-result accum)
-                              accum)))
-                        aggreact-command-history-enrichment-functions
-                        new-command-details))
-      (setq aggreact--current-groups (cons new-command-details aggreact--current-groups))
-      (let ((should-split
-             (or aggreact-explicit-repeat-command
-                 (if aggreact-command-group-split-predicate
-                     (funcall aggreact-command-group-split-predicate aggreact--current-groups)
-                   t)))
-            (explicit-repeat-cmd aggreact-explicit-repeat-command))
-        (when should-split
-          (let ((finalized-group (reverse aggreact--current-groups)))
-            (when explicit-repeat-cmd
-              (setcar finalized-group
-                      (cons `(explicit-repeat-command . ,explicit-repeat-cmd)
-                            (car finalized-group)))
-              (setq aggreact-explicit-repeat-command nil))
-            (setq aggreact--current-groups nil)
-            (with-demoted-errors
-                "error during aggreact-command-group-split-functions: %s"
-              (mapcar (lambda (func) (funcall func finalized-group))
-                      aggreact-command-group-split-functions))))))))
+    (if (> (recursion-depth) aggreact--recording-baseline-depth)
+        ;; Inside recursive edit: keys already captured in pre-command-hook.
+        ;; Don't record as a separate command.
+        nil
+      ;; At baseline depth: record command, merging any keys accumulated
+      ;; from a recursive edit that this command entered and returned from.
+      (let* ((recursive-tck (nreverse aggreact--recursive-edit-accumulated-tck-keys))
+             (recursive-single (nreverse aggreact--recursive-edit-accumulated-single-keys))
+             (recursive-raw (nreverse aggreact--recursive-edit-accumulated-raw-keys))
+             ;; If there were recursive-edit keys, this-command-keys is
+             ;; clobbered (it reflects the last inner command, not this one).
+             ;; Use the keys saved in pre-command instead.
+             (own-tck (if recursive-tck
+                          (list aggreact--pre-command-saved-tck)
+                        (this-command-all-keys 'tck t)))
+             (own-single (if recursive-tck
+                             (list aggreact--pre-command-saved-single)
+                           (this-command-all-keys 'single t)))
+             (own-raw (if recursive-tck
+                          (list aggreact--pre-command-saved-raw)
+                        (this-command-all-keys 'raw t)))
+             (recorded-command (if recursive-tck
+                                   aggreact--pre-command-saved-command
+                                 this-command))
+             (new-command-details
+              `((command . ,recorded-command)
+                ;; TODO - command arguments
+                (keys-vectors . ,(append own-tck recursive-tck))
+                (single-keys-vectors . ,(append own-single recursive-single))
+                (raw-keys-vectors . ,(append own-raw recursive-raw)))))
+        (setq aggreact--recursive-edit-accumulated-tck-keys nil)
+        (setq aggreact--recursive-edit-accumulated-single-keys nil)
+        (setq aggreact--recursive-edit-accumulated-raw-keys nil)
+        (setq new-command-details
+              (seq-reduce (lambda (accum enrich-func)
+                            (let ((enrich-result
+                                   (with-demoted-errors
+                                       "error during command history enrichment: %s"
+                                     (funcall enrich-func accum))))
+                              (if enrich-result
+                                  (append enrich-result accum)
+                                accum)))
+                          aggreact-command-history-enrichment-functions
+                          new-command-details))
+        (setq aggreact--current-groups (cons new-command-details aggreact--current-groups))
+        (let ((should-split
+               (or aggreact-explicit-repeat-command
+                   (if aggreact-command-group-split-predicate
+                       (funcall aggreact-command-group-split-predicate aggreact--current-groups)
+                     t)))
+              (explicit-repeat-cmd aggreact-explicit-repeat-command))
+          (when should-split
+            (let ((finalized-group (reverse aggreact--current-groups)))
+              (when explicit-repeat-cmd
+                (setcar finalized-group
+                        (cons `(explicit-repeat-command . ,explicit-repeat-cmd)
+                              (car finalized-group)))
+                (setq aggreact-explicit-repeat-command nil))
+              (setq aggreact--current-groups nil)
+              (with-demoted-errors
+                  "error during aggreact-command-group-split-functions: %s"
+                (mapcar (lambda (func) (funcall func finalized-group))
+                        aggreact-command-group-split-functions)))))))))
 
 (defun aggreact--get-keys-for-command-group (command-group)
   "Return the raw keys used for the entire COMMAND-GROUP as a flat vector."
@@ -162,9 +224,12 @@ See the composiphrase demo config at TODO to see an example setup using aggreact
       (progn
         (setq aggreact--this-command-all-keys-mode-state-before-aggreact
               this-command-all-keys-mode)
+        (setq aggreact--recording-baseline-depth (recursion-depth))
         (this-command-all-keys-mode 1)
+        (add-hook 'pre-command-hook 'aggreact--pre-command)
         (add-hook 'post-command-hook 'aggreact--post-command))
     (progn
+      (remove-hook 'pre-command-hook 'aggreact--pre-command)
       (remove-hook 'post-command-hook 'aggreact--post-command)
       (when (not aggreact--this-command-all-keys-mode-state-before-aggreact)
         (this-command-all-keys-mode -1)))))
