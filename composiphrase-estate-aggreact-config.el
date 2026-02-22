@@ -64,10 +64,10 @@
   (interactive "p")
   (setq cp-demo--aggreact-repeat-active-p t)
   (setq aggreact-inhibit-recording t)
-  (let ((last-command (ring-ref cp-demo-aggreact--editing-groups-ring 0)))
+  (let ((command-group-to-repeat (ring-ref cp-demo-aggreact--editing-groups-ring 0)))
     (unwind-protect
         (dotimes (i (or count 1))
-          (aggreact-execute-command-group-as-keyboard-macro last-command))
+          (aggreact-execute-command-group-as-keyboard-macro command-group-to-repeat))
       ;; Don't reset flags here -- they must remain set when post-command-hook
       ;; fires for THIS command, otherwise aggreact records the "." key itself
       ;; into the ring, causing infinite recursion on next repeat.
