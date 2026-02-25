@@ -71,7 +71,7 @@
           (tree-raise)
           (change-delimiter) ;; This really only makes sense for a few things... how many operators do I want to have that aren't really composable?  That said, it's a common operation, so I want it to be convenient in the layout even if it doesn't apply to most objects.
           (action) ;; IE some object-specific action that makes sense for the object's context.
-          (activate-visual-modifier-state)
+          (activate-visual-modifier-state (alternate . ,nil))
           ;; TODO - something like insert-move, eg. vi's I and A move to a useful place before inserting, which is useful for command repetition.  I can encapsulate a move then an edit with macros, which I want to use more frequently and have easily accessible.  But the command repetition of evil-mode is just so convenient, and if I implement something similar it would be nice to have a “move to relevant location then insert” as a single command to be captured for repetition.
           ;; TODO - what verbs?  Tree promote/demote, but eg. for paren trees we care about which kind of paren/bracket/brace/etc is used, or for xml we need a specific tag.  Tree splice - works for symex and xml, but less clearly useful for outline-mode or indent trees.  Tree change node type, eg. symex change paren type, xml change tag.  Tree raise - IE replace parent with child, except I'm used to the workflow of select-element, copy, expand to parent, paste.
           ;; TODO - there are many commands that can operate on a region, and any of them could be put into the map similar to delete, change, yank, upcase, etc.  Examples: eval-region, fill-region, center-region, indent-region, ispell-region, flyspsell-region, comment-region, uncomment-region, printify-region (replace non-printing characters), ... many silly ones: print-region, kkc-region, rot13-region, morse-region, unmorse-region, nato-region, denato-region, encrypt/decrypt region, base64-encode/decode, ... most of these, even the ones that are less silly, are probably not very useful to have in the composable command map, because you wouldn't really care to use them on the various text objects.
@@ -915,28 +915,28 @@
                         sentence-with-defaults))
           (activate-visual-modifier-state
            line
-           ((inner ,nil))
+           ((alternate ,nil) (inner ,nil))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (cpd-estate-visual-modifier-basic-activate 'line))
             ()))
           (activate-visual-modifier-state
            line
-           ((inner inner))
+           ((alternate ,nil) (inner inner))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (cpd-estate-visual-modifier-basic-activate 'cpo-line-no-newline))
             ()))
           (activate-visual-modifier-state
            word
-           ()
+           ((alternate ,nil))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (cpd-estate-visual-modifier-basic-activate 'word))
             ()))
           (activate-visual-modifier-state
            cpo-smartparens
-           ()
+           ((alternate ,nil))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (require 'cpo-smartparens)
@@ -946,7 +946,7 @@
             ()))
           (activate-visual-modifier-state
            cpo-indent-tree
-           ()
+           ((alternate ,nil))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (require 'cpo-indent-tree)
@@ -956,7 +956,7 @@
             ()))
           (activate-visual-modifier-state
            outline
-           ()
+           ((alternate ,nil))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (require 'cpo-outline)
@@ -966,13 +966,79 @@
             ()))
           (activate-visual-modifier-state
            cpo-treesitter-qd
-           ()
+           ((alternate ,nil))
            (,(lambda ()
                (require 'estate-visual-modifier-composiphrase-integration)
                (require 'cpo-outline)
                (cpd-estate-visual-modifier-tree-activate
                 'cpo-treesitter-qd
                 'cpo-treesitter-qd-estate-visual-modifier))
+            ()))
+
+          ;; Visual clamped object mode entries.
+          ;; Distinguished from regular visual-modifier by the alternate modifier.
+          ;; In clamped mode, both mark and point track the text object at the
+          ;; current position, creating a "moving highlight" effect.
+          (activate-visual-modifier-state
+           line
+           ((alternate alternate) (inner ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'line))
+            ()))
+          (activate-visual-modifier-state
+           line
+           ((alternate alternate) (inner inner))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'cpo-line-no-newline))
+            ()))
+          (activate-visual-modifier-state
+           word
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'word))
+            ()))
+          (activate-visual-modifier-state
+           cpo-smartparens
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-smartparens)
+               (cpd-estate-visual-clamped-object-tree-activate
+                'cpo-smartparens
+                'cpo-smartparens--bounds-of-sexp-at-point))
+            ()))
+          (activate-visual-modifier-state
+           cpo-indent-tree
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-indent-tree)
+               (cpd-estate-visual-clamped-object-tree-activate
+                'cpo-indent-tree
+                'cpo-indent-tree-bounds))
+            ()))
+          (activate-visual-modifier-state
+           outline
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-outline)
+               (cpd-estate-visual-clamped-object-tree-activate
+                'outline
+                'cpo-outline-tree-bounds))
+            ()))
+          (activate-visual-modifier-state
+           cpo-treesitter-qd
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-treesitter-qd)
+               (cpd-estate-visual-clamped-object-tree-activate
+                'cpo-treesitter-qd
+                'cpo-treesitter-qd-bounds-of-thing-at-point))
             ()))
 
 

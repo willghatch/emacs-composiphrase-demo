@@ -29,7 +29,9 @@ Keys are function objects, values are t.")
          (is-movement (memq verb-name estate-visual-modifier-composiphrase-movement-verbs)))
     ;; If not a movement command, expand region.  If it is a movement, disable the hooks for deactivating visual mode based on mark state
     (unless is-movement
-      (estate-visual-modifier-expand-region))
+      (if estate--visual-clamped-object-active
+          (estate-visual-clamped-object-expand-region)
+        (estate-visual-modifier-expand-region)))
     (funcall orig-fun sentence config)))
 
 (defun cpd--remove-estate-visual-modifier-advice ()
@@ -114,5 +116,37 @@ THING should be a symbol suitable for use with thing-at-point (e.g., 'word, 'sen
   (cpd--activate-estate-visual-modifier-hook)
   (estate-visual-state-activate-modifier
    (list tree-name tree-modifier)))
+
+
+;;; Visual clamped object mode integration with composiphrase.
+
+(require 'estate-visual-clamped-object-state)
+
+(defun cpd--thing-to-clamped-bounds-func (thing)
+  "Convert a THING symbol into a bounds function for clamped object mode.
+Returns a function of zero arguments that returns (BEG . END) at point."
+  (lambda ()
+    (bounds-of-thing-at-point thing)))
+
+(defun cpd-estate-visual-clamped-object-basic-activate (thing)
+  "Activate visual clamped object mode for a basic THING type.
+THING should be a symbol suitable for use with `bounds-of-thing-at-point'."
+  (setq estate-visual-clamped-object-command-predicate
+        'cpd--estate-visual-modifier-expansion-predicate)
+  (cpd--activate-estate-visual-modifier-hook)
+  (estate-visual-clamped-object-activate
+   thing
+   (cpd--thing-to-clamped-bounds-func thing)))
+
+(defun cpd-estate-visual-clamped-object-tree-activate (tree-name tree-bounds-func)
+  "Activate visual clamped object mode for a tree-based object.
+TREE-NAME is a symbol for display.
+TREE-BOUNDS-FUNC is a function of zero arguments returning (BEG . END)."
+  (setq estate-visual-clamped-object-command-predicate
+        'cpd--estate-visual-modifier-expansion-predicate)
+  (cpd--activate-estate-visual-modifier-hook)
+  (estate-visual-clamped-object-activate
+   tree-name
+   tree-bounds-func))
 
 (provide 'estate-visual-modifier-composiphrase-integration)
