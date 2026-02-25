@@ -27,6 +27,8 @@
 
 (require 'cpo-search-movements)
 (require 'cpo-helpers)
+(require 'cpo-location-history)
+(cpo-location-history-mode 1)
 
 ;; TODO - I don't know whether I want to require this up-front, but for the advice it adds, it needs to be loaded before creating all of the lambdas that modify the current command sentence.
 (require 'estate-visual-modifier-composiphrase-integration)
@@ -599,6 +601,9 @@ The command also executes the sentence, with region as the object, if the region
   ("hg" (lambda (n) (interactive "p")
           (funcall (cp/ae (cp/obj 'vcs-change)) n))
    "vcs-change" :exit t)
+  ("H" (lambda (n) (interactive "p")
+         (funcall (cp/ae (cp/obj 'location-history)) n))
+   "location-history" :exit t)
   ("h SPC" (lambda (n) (interactive "p")
              (funcall (cp/ae (cp/obj 'whitespace)) n))
    "whitespace" :exit t)

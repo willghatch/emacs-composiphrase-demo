@@ -109,6 +109,7 @@
           (isearch-new (default-verb . move))
           (isearch-repeat (default-verb . move))
           (jump-to-register (default-verb . move))
+          (location-history (default-verb . move) (alternate . ,nil))
 
           ;;;;;
           ;; TODO - some objects that I don't really have anything implemented for, but that I want.
@@ -165,6 +166,25 @@
                 ((direction backward))
                 (cpo-isearch-repeat-backward (num)))
           (move jump-to-register () ((lambda () (call-interactively 'jump-to-register)) ()))
+
+          (move location-history
+                ((direction backward) (alternate ,nil))
+                (rmo/cpo-location-history-global-back (num)))
+          (move location-history
+                ((direction forward) (alternate ,nil))
+                (rmo/cpo-location-history-global-forward (num)))
+          (move location-history
+                ((direction backward) (alternate alternate))
+                (rmo/cpo-location-history-local-back (num)))
+          (move location-history
+                ((direction forward) (alternate alternate))
+                (rmo/cpo-location-history-local-forward (num)))
+          (move location-history
+                ((direction backward) (alternate 2))
+                (rmo/cpo-location-history-non-local-back (num)))
+          (move location-history
+                ((direction forward) (alternate 2))
+                (rmo/cpo-location-history-non-local-forward (num)))
 
           ;; These git-gutter commands don't do everything I would like here, but they are close enough to include for now.
           (move vcs-change ((direction forward)) (rmo/git-gutter:next-hunk (num)))
