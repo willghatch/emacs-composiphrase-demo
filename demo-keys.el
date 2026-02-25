@@ -143,6 +143,9 @@ The command also executes the sentence, with region as the object, if the region
 ;; Insert state
 
 (eimap "\C-v" 'quoted-insert)
+(eImap "\C-o" (lambda () (interactive)
+                (require 'estate-insert-one-command)
+                (estate-insert-state-one-normal-command)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
