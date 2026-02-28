@@ -128,6 +128,7 @@
           (tracking-number)
           (file-name (default-verb . move))
           (date-yyyy-mm-dd (default-verb . move) (location-within . beginning))
+          (cpo-comma-list (default-verb . move) (location-within . beginning))
           ;; TODO - I want modifiers for respecting or not respecting tree bounds.  Eg. I typically want go-to-sibling for tree things that don't go out to cousin nodes.  But sometimes it is convenient to just go to the start of the next thing not caring about tree siblings.  But maybe most of the places where I want to disrespect trees are for specific kinds of nodes.  Eg. I want a convenient “go to next/prev function definition”, but I rarely want “go to next expression disregarding tree shape”, or “go to next argument” that goes out to some other function call.
           ;; TODO - I want some modifier to go to a tree node with a given tag.  Eg. this could be a lisp form that starts with a particular symbol, or a specific xml tag, or a treesitter node of particular type.  For org-mode or cpo-indent-tree it could be a particular indentation depth or something that I can match about the header or line.
           ))
@@ -711,6 +712,17 @@
           (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate alternate))
                 (rmo/cpo-backward-datetime-end (num)))
 
+          (move cpo-comma-list ((direction expand-region))
+                (cpo-comma-list-expand-region ()))
+          (move cpo-comma-list ((direction forward) (location-within beginning))
+                (rmo/cpo-comma-list-forward-beginning (num)))
+          (move cpo-comma-list ((direction backward) (location-within beginning))
+                (rmo/cpo-comma-list-backward-beginning (num)))
+          (move cpo-comma-list ((direction forward) (location-within end))
+                (rmo/cpo-comma-list-forward-end (num)))
+          (move cpo-comma-list ((direction backward) (location-within end))
+                (rmo/cpo-comma-list-backward-end (num)))
+
           ;; TODO - for transpose character, implement something that follows the character explicitly forward/backward.
           (transpose word ((direction forward)) (,(aggreact-make-explicit-command 'cpo-transpose-word-forward) (num)))
           (transpose word ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-word-backward) (num)))
@@ -736,6 +748,8 @@
           (transpose date-yyyy-mm-dd ((direction backward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-backward) (num)))
           (transpose date-yyyy-mm-dd ((direction forward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-forward) (num)))
           (transpose date-yyyy-mm-dd ((direction backward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-backward) (num)))
+          (transpose cpo-comma-list ((direction forward)) (,(aggreact-make-explicit-command 'cpo-comma-list-transpose-forward) (num)))
+          (transpose cpo-comma-list ((direction backward)) (,(aggreact-make-explicit-command 'cpo-comma-list-transpose-backward) (num)))
           (transpose cpo-smartparens ((tree-vertical up)) (cpo-smartparens-ancestor-reorder (num)))
           (transpose cpo-smartparens ((tree-vertical ,nil) (direction forward)) (,(aggreact-make-explicit-command 'cpo-smartparens-transpose-sibling-forward) (num)))
           (transpose cpo-smartparens ((tree-vertical ,nil) (direction backward)) (,(aggreact-make-explicit-command 'cpo-smartparens-transpose-sibling-backward) (num)))
@@ -760,6 +774,8 @@
           (open cpo-indent-tree ((direction forward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-indent-tree-open-sibling-forward))))
           (open cpo-indent-tree ((direction backward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-indent-tree-open-sibling-backward))))
           (open cpo-indent-tree ((tree-vertical down)) (,(lambda () (message "TODO - implement open cpo-indent-tree child"))))
+          (open cpo-comma-list ((direction forward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-comma-list-open-forward)) ()))
+          (open cpo-comma-list ((direction backward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-comma-list-open-backward)) ()))
           (open cpo-smartparens ((direction forward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-smartparens-open-sibling-forward)) ()))
           (open cpo-smartparens ((direction backward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-smartparens-open-sibling-backward)) ()))
           ;; TODO - symex open - ignore unwrapped forms and open a sibling form with the same paren type, hopefully matching indentation...

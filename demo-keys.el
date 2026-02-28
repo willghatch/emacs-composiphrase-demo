@@ -614,6 +614,9 @@ The command also executes the sentence, with region as the object, if the region
   ("hf" (lambda (n) (interactive "p")
           (funcall (cp/ae (cp/obj 'file-name)) n))
    "file-name" :exit t)
+  ("," (lambda (n) (interactive "p")
+         (funcall (cp/ae (progn (require 'cpo-comma-list) (cp/obj 'cpo-comma-list))) n))
+   "comma-list" :exit t)
 
 
   ;; Specific delimiters, use smartparens for them.
