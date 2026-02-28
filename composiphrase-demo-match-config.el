@@ -68,6 +68,7 @@
           ;; TODO - none of the below are really implemented yet.
           (promote)
           (demote) ;; For symex you should be prompted to choose a tag to wrap with, and for xml you should be prompted for a tag.
+          (tree-raise)
           (change-delimiter) ;; This really only makes sense for a few things... how many operators do I want to have that aren't really composable?  That said, it's a common operation, so I want it to be convenient in the layout even if it doesn't apply to most objects.
           (action) ;; IE some object-specific action that makes sense for the object's context.
           (activate-visual-modifier-state)
@@ -666,7 +667,9 @@
                 (rmo/cpo-indent-tree-down-to-last-child (num)))
           (promote cpo-indent-tree () (cpo-indent-tree-promote ()))
           (demote cpo-indent-tree () (cpo-indent-tree-demote ()))
+          (tree-raise cpo-indent-tree () (cpo-indent-tree-raise ()))
 
+          (tree-raise cpo-smartparens () (cpo-smartparens-raise ()))
 
           (move url ((direction expand-region))
                 (cpo-expand-region-to-url))
