@@ -24,8 +24,11 @@
 0 means the most recent entry; increases toward older entries.")
 
 (defvar cpo-location-history--navigating nil
-  "Non-nil while executing a history navigation command.
-Suppresses recording new entries during navigation.")
+  "Non-nil when the last command was a history navigation command.
+Set to t by navigation commands via `setq'; cleared by
+`cpo-location-history-record' on the next `post-command-hook' cycle.
+This ensures the record function skips the post-command-hook that
+fires immediately after a navigation command.")
 
 (defvar cpo-location-history--last-buffer nil
   "Buffer at the last recorded location.")
@@ -39,23 +42,31 @@ Suppresses recording new entries during navigation.")
 (defun cpo-location-history-record ()
   "Record the current location in the history ring if it meaningfully changed.
 Intended for use on `post-command-hook'.
-Skips recording when `cpo-location-history--navigating' is non-nil."
-  (when (and (not cpo-location-history--navigating)
-             (not (minibufferp)))
-    (let ((buf (current-buffer))
-          (pos (point)))
-      (when (or (not (eq buf cpo-location-history--last-buffer))
-                (null cpo-location-history--last-position)
-                (> (abs (- pos cpo-location-history--last-position))
-                   cpo-location-history-min-distance))
-        ;; Reset index whenever a real command records a new location.
-        (setq cpo-location-history--index 0)
-        (ring-insert cpo-location-history-ring (cons buf pos))
-        (setq cpo-location-history--last-buffer buf)
-        (setq cpo-location-history--last-position pos)))))
+Skips recording when `cpo-location-history--navigating' is non-nil,
+then clears that flag so the next non-navigation command records normally.
+Also skips recording inside recursive edits (e.g. isearch), so that
+incremental movements do not pollute the history."
+  (if cpo-location-history--navigating
+      ;; A navigation command just ran.  Clear the flag but do not record,
+      ;; so that traversal does not pollute the ring.
+      (setq cpo-location-history--navigating nil)
+    (when (and (not (minibufferp))
+              (= (recursion-depth) 0))
+      (let ((buf (current-buffer))
+            (pos (point)))
+        (when (or (not (eq buf cpo-location-history--last-buffer))
+                  (null cpo-location-history--last-position)
+                  (> (abs (- pos cpo-location-history--last-position))
+                     cpo-location-history-min-distance))
+          ;; Reset index whenever a real command records a new location.
+          (setq cpo-location-history--index 0)
+          (ring-insert cpo-location-history-ring (cons buf pos))
+          (setq cpo-location-history--last-buffer buf)
+          (setq cpo-location-history--last-position pos))))))
 
 (defun cpo-location-history--filtered-indices (mode)
-  "Return a list of ring indices matching MODE, ordered oldest-to-newest.
+  "Return a list of ring indices matching MODE, ordered newest-to-oldest.
+Ring index 0 is the most recently inserted entry.
 MODE is one of: \\='global, \\='local, \\='non-local.
 For \\='local, only entries whose buffer is the current buffer are included.
 For \\='non-local, only entries whose buffer differs from the current buffer.
@@ -75,7 +86,9 @@ For \\='global, all entries are included."
          ((eq mode 'non-local)
           (when (not (eq entry-buf cur-buf))
             (push i result))))))
-    ;; result was built newest-first (index 0 first), reverse for oldest-first
+    ;; result was built newest-first (index 0 pushed first), so it is
+    ;; currently oldest-first.  Reverse to get newest-first (ascending
+    ;; ring index order: 0, 1, 2, ... where 0 is newest).
     (nreverse result)))
 
 (defun cpo-location-history--navigate (direction mode)
@@ -94,21 +107,42 @@ MODE is \\='global, \\='local, or \\='non-local."
          ((= n-filtered 0)
           (message "No matching location history entries for mode: %s" mode))
          (t
-          ;; Find where the current index sits among filtered indices.
-          ;; We want to move relative to the current index within the filtered set.
-          (let* ((cur-pos-in-filtered
-                  ;; Find the position in the filtered list that is >= current index
-                  (let ((pos 0)
-                        (found nil))
+          ;; Find the target position in the filtered list.
+          ;; The indices list is ordered newest-first (ascending ring indices,
+          ;; where ring index 0 is the newest entry).
+          ;; Backward (older) = toward higher ring indices = higher list positions.
+          ;; Forward (newer)  = toward lower ring indices = lower list positions.
+          (let* ((new-pos-in-filtered
+                  (let ((exact-pos nil)
+                        (first-older nil)    ; first filtered pos with idx > --index
+                        (last-newer nil)     ; last filtered pos with idx < --index
+                        (pos 0))
                     (dolist (idx indices)
-                      (when (and (not found) (>= idx cpo-location-history--index))
-                        (setq found pos))
+                      (cond
+                       ((= idx cpo-location-history--index)
+                        (setq exact-pos pos))
+                       ((and (> idx cpo-location-history--index)
+                             (null first-older))
+                        (setq first-older pos))
+                       ((< idx cpo-location-history--index)
+                        (setq last-newer pos)))
                       (setq pos (1+ pos)))
-                    (or found (1- n-filtered))))
-                 (new-pos-in-filtered
-                  (if (eq direction 'backward)
-                      (min (1+ cur-pos-in-filtered) (1- n-filtered))
-                    (max (1- cur-pos-in-filtered) 0)))
+                    (if (eq direction 'backward)
+                        ;; Going older: if we are exactly on a filtered entry,
+                        ;; move to the next older one; otherwise jump to the
+                        ;; first filtered entry that is already older.
+                        (cond
+                         ((and exact-pos first-older) first-older)
+                         (exact-pos exact-pos)   ; already at oldest filtered
+                         (first-older first-older)
+                         (t 0))  ; fallback: newest filtered
+                      ;; Going newer: if exact match, move to the next newer one;
+                      ;; otherwise jump to the nearest filtered entry that is newer.
+                      (cond
+                       ((and exact-pos last-newer) last-newer)
+                       (exact-pos exact-pos)   ; already at newest filtered
+                       (last-newer last-newer)
+                       (t (1- n-filtered))))))
                  (new-index (nth new-pos-in-filtered indices))
                  (entry (ring-ref cpo-location-history-ring new-index))
                  (target-buf (car entry))
@@ -134,15 +168,15 @@ MODE is \\='global, \\='local, or \\='non-local."
   "Go backward (older) in location history.
 MODE is \\='global (default), \\='local, or \\='non-local."
   (interactive)
-  (let ((cpo-location-history--navigating t))
-    (cpo-location-history--navigate 'backward (or mode 'global))))
+  (setq cpo-location-history--navigating t)
+  (cpo-location-history--navigate 'backward (or mode 'global)))
 
 (defun cpo-location-history-forward (&optional mode)
   "Go forward (newer) in location history.
 MODE is \\='global (default), \\='local, or \\='non-local."
   (interactive)
-  (let ((cpo-location-history--navigating t))
-    (cpo-location-history--navigate 'forward (or mode 'global))))
+  (setq cpo-location-history--navigating t)
+  (cpo-location-history--navigate 'forward (or mode 'global)))
 
 ;;;###autoload
 (define-minor-mode cpo-location-history-mode
