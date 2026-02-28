@@ -994,6 +994,80 @@
                 'cpo-treesitter-qd
                 'cpo-treesitter-qd-estate-visual-modifier))
             ()))
+          (activate-visual-modifier-state
+           cpo-vi-like-word
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-modifier-basic-activate 'cpo-vi-like-word))
+            ()))
+          (activate-visual-modifier-state
+           symbol
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-modifier-basic-activate 'symbol))
+            ()))
+          (activate-visual-modifier-state
+           sexp
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-modifier-basic-activate 'sexp))
+            ()))
+          (activate-visual-modifier-state
+           list
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-modifier-basic-activate 'list))
+            ()))
+          (activate-visual-modifier-state
+           sentence
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-modifier-basic-activate 'sentence))
+            ()))
+          (activate-visual-modifier-state
+           paragraph
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-modifier-basic-activate 'paragraph))
+            ()))
+          (activate-visual-modifier-state
+           url
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-url-object)
+               (cpd-estate-visual-modifier-basic-activate 'url))
+            ()))
+          (activate-visual-modifier-state
+           email
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-url-object)
+               (cpd-estate-visual-modifier-basic-activate 'email))
+            ()))
+          (activate-visual-modifier-state
+           date-yyyy-mm-dd
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-date-object)
+               (cpd-estate-visual-modifier-basic-activate 'cpo-date))
+            ()))
+          (activate-visual-modifier-state
+           cpo-comma-list
+           ((alternate ,nil))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-comma-list)
+               (cpd-estate-visual-modifier-basic-activate 'cpo-comma-list))
+            ()))
 
           ;; Visual clamped object mode entries.
           ;; Distinguished from regular visual-modifier by the alternate modifier.
@@ -1059,6 +1133,80 @@
                (cpd-estate-visual-clamped-object-tree-activate
                 'cpo-treesitter-qd
                 'cpo-treesitter-qd-bounds-of-thing-at-point))
+            ()))
+          (activate-visual-modifier-state
+           cpo-vi-like-word
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'cpo-vi-like-word))
+            ()))
+          (activate-visual-modifier-state
+           symbol
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'symbol))
+            ()))
+          (activate-visual-modifier-state
+           sexp
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'sexp))
+            ()))
+          (activate-visual-modifier-state
+           list
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'list))
+            ()))
+          (activate-visual-modifier-state
+           sentence
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'sentence))
+            ()))
+          (activate-visual-modifier-state
+           paragraph
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (cpd-estate-visual-clamped-object-basic-activate 'paragraph))
+            ()))
+          (activate-visual-modifier-state
+           url
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-url-object)
+               (cpd-estate-visual-clamped-object-basic-activate 'url))
+            ()))
+          (activate-visual-modifier-state
+           email
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-url-object)
+               (cpd-estate-visual-clamped-object-basic-activate 'email))
+            ()))
+          (activate-visual-modifier-state
+           date-yyyy-mm-dd
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-date-object)
+               (cpd-estate-visual-clamped-object-basic-activate 'cpo-date))
+            ()))
+          (activate-visual-modifier-state
+           cpo-comma-list
+           ((alternate alternate))
+           (,(lambda ()
+               (require 'estate-visual-modifier-composiphrase-integration)
+               (require 'cpo-comma-list)
+               (cpd-estate-visual-clamped-object-basic-activate 'cpo-comma-list))
             ()))
 
 
