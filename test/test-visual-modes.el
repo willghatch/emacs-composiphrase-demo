@@ -1,4 +1,4 @@
-;;; test-visual-modes.el --- Tests for visual-modifier and visual-clamped-object modes -*- lexical-binding: t; -*-
+;;; test-visual-modes.el --- Tests for visual-modifier and visual-clamped-modifier modes -*- lexical-binding: t; -*-
 
 ;; To run these tests from the command line:
 ;; ./test/run-tests.sh
@@ -6,7 +6,7 @@
 (require 'ert)
 (require 'estate-default-states)
 (require 'estate-visual-modifier-state)
-(require 'estate-visual-clamped-object-state)
+(require 'estate-visual-modifier-clamped-state)
 (require 'carettest-tesmut)
 
 ;;; ================================================================
@@ -108,15 +108,15 @@ Creates a simple line modifier that expands region to line boundaries."
              (list new-beg new-end))))))
 
 (defun test-vm--activate-word-clamped ()
-  "Activate visual clamped object mode for words."
-  (estate-visual-clamped-object-activate
+  "Activate visual clamped modifier mode for words."
+  (estate-visual-state-activate-clamped-modifier
    'word
    (lambda ()
      (bounds-of-thing-at-point 'word))))
 
 (defun test-vm--activate-line-clamped ()
-  "Activate visual clamped object mode for lines."
-  (estate-visual-clamped-object-activate
+  "Activate visual clamped modifier mode for lines."
+  (estate-visual-state-activate-clamped-modifier
    'line
    (lambda ()
      (cons (line-beginning-position) (line-end-position)))))
@@ -141,7 +141,7 @@ which is necessary because hooks do not fire from `funcall'."
 (defun test-vm--overlay-regions ()
   "Get a sorted list of (beg . end) pairs for all visual modifier overlays."
   (let ((overlays (append estate--visual-modifier-overlays
-                          estate--visual-clamped-object-overlays)))
+                          estate--visual-clamped-modifier-overlays)))
     (sort (mapcar (lambda (ov)
                     (cons (overlay-start ov) (overlay-end ov)))
                   overlays)
@@ -365,46 +365,46 @@ to cover the word boundaries beyond the actual region."
            (test-vm--activate-line-modifier)))
 
 ;;; ================================================================
-;;; Visual clamped object mode: basic activation
+;;; Visual clamped modifier mode: basic activation
 ;;; ================================================================
 
 (ert-deftest test-vm-clamped-activation-state ()
-  "Activating clamped object mode sets state and installs hooks."
+  "Activating clamped modifier mode sets state and installs hooks."
   (with-temp-buffer
     (insert "hello world test")
     (goto-char (point-min))
     (test-vm--forward-to-text-beg "orld")
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
-    (should estate--visual-clamped-object-active)
+    (should estate--visual-clamped-modifier-active)
     (should (eq estate-state 'visual))
     ;; Mark should be at point (zero-width region)
     (should (= (mark) (point)))
-    (should (member 'estate--visual-clamped-object-pre-command
+    (should (member 'estate--visual-clamped-modifier-pre-command
                     (buffer-local-value 'pre-command-hook (current-buffer))))
-    (should (member 'estate--visual-clamped-object-post-command
+    (should (member 'estate--visual-clamped-modifier-post-command
                     (buffer-local-value 'post-command-hook (current-buffer))))))
 
 (ert-deftest test-vm-clamped-deactivation-cleanup ()
-  "Deactivating clamped object mode clears all state."
+  "Deactivating clamped modifier mode clears all state."
   (with-temp-buffer
     (insert "hello world test")
     (goto-char (point-min))
     (test-vm--forward-to-text-beg "orld")
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
-    (estate--visual-clamped-object-deactivate)
-    (should (null estate--visual-clamped-object-active))
-    (should (null estate--visual-clamped-object-func))
-    (should (null estate--visual-clamped-object-overlays))
+    (estate--visual-clamped-modifier-deactivate)
+    (should (null estate--visual-clamped-modifier-active))
+    (should (null estate--visual-clamped-modifier-func))
+    (should (null estate--visual-clamped-modifier-overlays))
     (should (null estate--visual-clamped-region-expanded))))
 
 ;;; ================================================================
-;;; Visual clamped object mode: overlay at point
+;;; Visual clamped modifier mode: overlay at point
 ;;; ================================================================
 
 (ert-deftest test-vm-clamped-overlay-at-word ()
-  "Clamped object mode shows overlay for word at point."
+  "Clamped modifier mode shows overlay for word at point."
   (with-temp-buffer
     (insert "hello world test")
     (goto-char (point-min))
@@ -419,7 +419,7 @@ to cover the word boundaries beyond the actual region."
       (should (= (cdr (car regions)) (test-vm--pos-at-text-end "world"))))))
 
 (ert-deftest test-vm-clamped-overlay-at-line ()
-  "Clamped object mode with lines shows overlay for entire line."
+  "Clamped modifier mode with lines shows overlay for entire line."
   (with-temp-buffer
     (insert "first line\nsecond line\nthird line")
     (goto-char (point-min))
@@ -436,7 +436,7 @@ to cover the word boundaries beyond the actual region."
                  (test-vm--pos-at-text-end "second line"))))))
 
 ;;; ================================================================
-;;; Visual clamped object mode: mark follows point
+;;; Visual clamped modifier mode: mark follows point
 ;;; ================================================================
 
 (ert-deftest test-vm-clamped-mark-follows-point-on-movement ()
@@ -450,7 +450,7 @@ to cover the word boundaries beyond the actual region."
     ;; Verify initial state: mark = point
     (should (= (mark) (point)))
     ;; Simulate a movement -- don't set command predicate so nothing expands
-    (setq estate-visual-clamped-object-command-predicate nil)
+    (setq estate-visual-clamped-modifier-command-predicate nil)
     (test-vm--simulate-movement
      (lambda () (forward-word 1)))
     ;; After movement, mark should follow point
@@ -470,7 +470,7 @@ to cover the word boundaries beyond the actual region."
       (should (= (car (car regions)) (test-vm--pos-at-text-beg "hello")))
       (should (= (cdr (car regions)) (test-vm--pos-at-text-end "hello"))))
     ;; Move to "world"
-    (setq estate-visual-clamped-object-command-predicate nil)
+    (setq estate-visual-clamped-modifier-command-predicate nil)
     (test-vm--simulate-movement
      (lambda ()
        (goto-char (point-min))
@@ -482,7 +482,7 @@ to cover the word boundaries beyond the actual region."
       (should (= (cdr (car regions)) (test-vm--pos-at-text-end "world"))))))
 
 ;;; ================================================================
-;;; Visual clamped object mode: region expansion
+;;; Visual clamped modifier mode: region expansion
 ;;; ================================================================
 
 (ert-deftest test-vm-clamped-expansion-for-action ()
@@ -494,7 +494,7 @@ to cover the word boundaries beyond the actual region."
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
     ;; Set predicate to always expand
-    (setq estate-visual-clamped-object-command-predicate
+    (setq estate-visual-clamped-modifier-command-predicate
           (lambda (_cmd) t))
     ;; Simulate pre-command
     (let ((this-command 'test-action))
@@ -518,18 +518,18 @@ to cover the word boundaries beyond the actual region."
     (test-vm--forward-to-text-beg "orld")
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
-    (setq estate-visual-clamped-object-command-predicate
+    (setq estate-visual-clamped-modifier-command-predicate
           (lambda (_cmd) t))
     ;; Simulate a buffer-modifying action
     (test-vm--simulate-action
      (lambda ()
-       (estate-visual-clamped-object-expand-region)
+       (estate-visual-clamped-modifier-expand-region)
        (upcase-region (region-beginning) (region-end))))
     ;; Clamped mode should be deactivated
-    (should (null estate--visual-clamped-object-active))))
+    (should (null estate--visual-clamped-modifier-active))))
 
 (ert-deftest test-vm-clamped-manual-expansion ()
-  "estate-visual-clamped-object-expand-region can be called manually."
+  "estate-visual-clamped-modifier-expand-region can be called manually."
   (with-temp-buffer
     (insert "hello world test")
     (goto-char (point-min))
@@ -539,20 +539,20 @@ to cover the word boundaries beyond the actual region."
     ;; Initially mark = point
     (should (= (mark) (point)))
     ;; Manually expand
-    (estate-visual-clamped-object-expand-region)
+    (estate-visual-clamped-modifier-expand-region)
     (should estate--visual-clamped-region-expanded)
     (should (= (region-beginning) (test-vm--pos-at-text-beg "world")))
     (should (= (region-end) (test-vm--pos-at-text-end "world")))))
 
 ;;; ================================================================
-;;; Visual clamped object: carettest-tesmut integration
+;;; Visual clamped modifier: carettest-tesmut integration
 ;;; ================================================================
 
 (carettest-tesmut-test test-vm-clamped-upcase-word-at-point
   :before "hello <p>world test"
   :after "hello <m>WORLD<p> test"
   :function (lambda ()
-              (estate-visual-clamped-object-expand-region)
+              (estate-visual-clamped-modifier-expand-region)
               (upcase-region (region-beginning) (region-end)))
   :setup (progn
            (test-vm--setup-estate)
@@ -562,14 +562,14 @@ to cover the word boundaries beyond the actual region."
   :before "hello world\nfoo <p>bar baz\nquux"
   :after "hello world\n<m>FOO BAR BAZ<p>\nquux"
   :function (lambda ()
-              (estate-visual-clamped-object-expand-region)
+              (estate-visual-clamped-modifier-expand-region)
               (upcase-region (region-beginning) (region-end)))
   :setup (progn
            (test-vm--setup-estate)
            (test-vm--activate-line-clamped)))
 
 ;;; ================================================================
-;;; Visual clamped object: sequence tests
+;;; Visual clamped modifier: sequence tests
 ;;; ================================================================
 
 ;; Test movement then action sequence.
@@ -584,7 +584,7 @@ to cover the word boundaries beyond the actual region."
     (test-vm--forward-to-text-beg "llo")
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
-    (setq estate-visual-clamped-object-command-predicate nil)
+    (setq estate-visual-clamped-modifier-command-predicate nil)
     ;; Step 1: Move to "world"
     (test-vm--simulate-movement
      (lambda ()
@@ -598,7 +598,7 @@ to cover the word boundaries beyond the actual region."
       (should (= (car (car regions)) (test-vm--pos-at-text-beg "world")))
       (should (= (cdr (car regions)) (test-vm--pos-at-text-end "world"))))
     ;; Step 2: Upcase (manually expanding)
-    (estate-visual-clamped-object-expand-region)
+    (estate-visual-clamped-modifier-expand-region)
     (upcase-region (region-beginning) (region-end))
     ;; Verify the buffer content
     (should (string= (buffer-string) "hello WORLD test"))))
@@ -611,7 +611,7 @@ to cover the word boundaries beyond the actual region."
     (test-vm--forward-to-text-beg "pha")
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
-    (setq estate-visual-clamped-object-command-predicate nil)
+    (setq estate-visual-clamped-modifier-command-predicate nil)
     ;; Move to "beta"
     (test-vm--simulate-movement
      (lambda ()
@@ -705,13 +705,13 @@ to cover the word boundaries beyond the actual region."
     (test-vm--forward-to-text-beg "orld")
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
-    (should estate--visual-clamped-object-active)
+    (should estate--visual-clamped-modifier-active)
     ;; Switch to normal state
     (estate--deactivate-initialize-core-states)
     (estate-normal-state)
     (estate--activate-initialize-core-states)
     ;; Clamped mode should be cleaned up
-    (should (null estate--visual-clamped-object-active))))
+    (should (null estate--visual-clamped-modifier-active))))
 
 ;;; ================================================================
 ;;; Visual modifier mode: cache behavior
@@ -742,7 +742,7 @@ to cover the word boundaries beyond the actual region."
         (should (not (equal result1 result2)))))))
 
 ;;; ================================================================
-;;; Visual clamped object: bounds function returning nil
+;;; Visual clamped modifier: bounds function returning nil
 ;;; ================================================================
 
 (ert-deftest test-vm-clamped-nil-bounds ()
@@ -754,17 +754,17 @@ to cover the word boundaries beyond the actual region."
     (forward-char 1) ;; on whitespace between words (second space)
     (test-vm--setup-estate)
     ;; Use a bounds function that returns nil for non-word positions
-    (estate-visual-clamped-object-activate
+    (estate-visual-state-activate-clamped-modifier
      'word
      (lambda ()
        (bounds-of-thing-at-point 'word)))
     ;; On whitespace, bounds-of-thing-at-point might return nil
     ;; (depends on how 'word is defined, but multiple spaces likely return nil)
     ;; Regardless, the mode should not crash
-    (should estate--visual-clamped-object-active)))
+    (should estate--visual-clamped-modifier-active)))
 
 ;;; ================================================================
-;;; Visual clamped object: contraction after non-modifying action
+;;; Visual clamped modifier: contraction after non-modifying action
 ;;; ================================================================
 
 (ert-deftest test-vm-clamped-contraction-after-non-modifying-action ()
@@ -776,7 +776,7 @@ to cover the word boundaries beyond the actual region."
     (test-vm--setup-estate)
     (test-vm--activate-word-clamped)
     (let ((original-point (point)))
-      (setq estate-visual-clamped-object-command-predicate
+      (setq estate-visual-clamped-modifier-command-predicate
             (lambda (_cmd) t))
       ;; Simulate a non-modifying action (like copy-region-as-kill)
       (test-vm--simulate-action
@@ -788,7 +788,7 @@ to cover the word boundaries beyond the actual region."
       ;; Mark should be back at point
       (should (= (mark) original-point))
       ;; Mode should still be active
-      (should estate--visual-clamped-object-active))))
+      (should estate--visual-clamped-modifier-active))))
 
 ;;; ================================================================
 ;;; Visual modifier: get-modifier-function
