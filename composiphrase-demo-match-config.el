@@ -7,6 +7,9 @@
 ;; For aggreact-make-explicit-command for transposition commands.
 (require 'aggreact)
 
+;; Must require this for the hack advice for visual modifier to decide what commands are sentence building.
+(require 'estate-visual-modifier-composiphrase-integration)
+
 (defun composiphrase--make-movement-delegated-command (f-on-region &optional pass-sentence)
   "F-ON-REGION must take two args, region start and region end."
   (lambda (sentence-with-defaults)
@@ -936,138 +939,87 @@
           (activate-visual-modifier-state
            line
            ((alternate ,nil) (inner ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'line))
-            ()))
+           (,(cpd-visual-modifier-activator 'line) ()))
           (activate-visual-modifier-state
            line
            ((alternate ,nil) (inner inner))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'cpo-line-no-newline))
-            ()))
+           (,(cpd-visual-modifier-activator 'cpo-line-no-newline) ()))
           (activate-visual-modifier-state
            word
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'word))
-            ()))
+           (,(cpd-visual-modifier-activator 'word) ()))
           (activate-visual-modifier-state
            cpo-smartparens
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-smartparens)
-               (cpd-estate-visual-modifier-tree-activate
-                'cpo-smartparens
-                'cpo-smartparens-estate-visual-modifier))
+           (,(cpd-visual-modifier-tree-activator
+              'cpo-smartparens
+              'cpo-smartparens-estate-visual-modifier
+              'cpo-smartparens)
             ()))
           (activate-visual-modifier-state
            cpo-indent-tree
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-indent-tree)
-               (cpd-estate-visual-modifier-tree-activate
-                'cpo-indent-tree
-                'cpo-indent-tree-estate-visual-modifier))
+           (,(cpd-visual-modifier-tree-activator
+              'cpo-indent-tree
+              'cpo-indent-tree-estate-visual-modifier
+              'cpo-indent-tree)
             ()))
           (activate-visual-modifier-state
            outline
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-outline)
-               (cpd-estate-visual-modifier-tree-activate
-                'outline
-                'cpo-outline-estate-visual-modifier))
+           (,(cpd-visual-modifier-tree-activator
+              'outline
+              'cpo-outline-estate-visual-modifier
+              'cpo-outline)
             ()))
           (activate-visual-modifier-state
            cpo-treesitter-qd
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-outline)
-               (cpd-estate-visual-modifier-tree-activate
-                'cpo-treesitter-qd
-                'cpo-treesitter-qd-estate-visual-modifier))
+           (,(cpd-visual-modifier-tree-activator
+              'cpo-treesitter-qd
+              'cpo-treesitter-qd-estate-visual-modifier
+              'cpo-treesitter-qd)
             ()))
           (activate-visual-modifier-state
            cpo-vi-like-word
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'cpo-vi-like-word))
-            ()))
+           (,(cpd-visual-modifier-activator 'cpo-vi-like-word) ()))
           (activate-visual-modifier-state
            symbol
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'symbol))
-            ()))
+           (,(cpd-visual-modifier-activator 'symbol) ()))
           (activate-visual-modifier-state
            sexp
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'sexp))
-            ()))
+           (,(cpd-visual-modifier-activator 'sexp) ()))
           (activate-visual-modifier-state
            list
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'list))
-            ()))
+           (,(cpd-visual-modifier-activator 'list) ()))
           (activate-visual-modifier-state
            sentence
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'sentence))
-            ()))
+           (,(cpd-visual-modifier-activator 'sentence) ()))
           (activate-visual-modifier-state
            paragraph
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-modifier-basic-activate 'paragraph))
-            ()))
+           (,(cpd-visual-modifier-activator 'paragraph) ()))
           (activate-visual-modifier-state
            url
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-url-object)
-               (cpd-estate-visual-modifier-basic-activate 'url))
-            ()))
+           (,(cpd-visual-modifier-activator 'url 'cpo-url-object) ()))
           (activate-visual-modifier-state
            email
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-url-object)
-               (cpd-estate-visual-modifier-basic-activate 'email))
-            ()))
+           (,(cpd-visual-modifier-activator 'email 'cpo-url-object) ()))
           (activate-visual-modifier-state
            date-yyyy-mm-dd
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-date-object)
-               (cpd-estate-visual-modifier-basic-activate 'cpo-date))
-            ()))
+           (,(cpd-visual-modifier-activator 'cpo-date 'cpo-date-object) ()))
           (activate-visual-modifier-state
            cpo-comma-list
            ((alternate ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-comma-list)
-               (cpd-estate-visual-modifier-basic-activate 'cpo-comma-list))
-            ()))
+           (,(cpd-visual-modifier-activator 'cpo-comma-list 'cpo-comma-list) ()))
 
           ;; Visual clamped modifier mode entries.
           ;; Distinguished from regular visual-modifier by the alternate modifier.
@@ -1076,138 +1028,87 @@
           (activate-visual-modifier-state
            line
            ((alternate alternate) (inner ,nil))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'line))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'line) ()))
           (activate-visual-modifier-state
            line
            ((alternate alternate) (inner inner))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'cpo-line-no-newline))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'cpo-line-no-newline) ()))
           (activate-visual-modifier-state
            word
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'word))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'word) ()))
           (activate-visual-modifier-state
            cpo-smartparens
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-smartparens)
-               (cpd-estate-visual-clamped-modifier-tree-activate
-                'cpo-smartparens
-                'cpo-smartparens--bounds-of-sexp-at-point))
+           (,(cpd-visual-clamped-modifier-tree-activator
+              'cpo-smartparens
+              'cpo-smartparens--bounds-of-sexp-at-point
+              'cpo-smartparens)
             ()))
           (activate-visual-modifier-state
            cpo-indent-tree
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-indent-tree)
-               (cpd-estate-visual-clamped-modifier-tree-activate
-                'cpo-indent-tree
-                'cpo-indent-tree-bounds))
+           (,(cpd-visual-clamped-modifier-tree-activator
+              'cpo-indent-tree
+              'cpo-indent-tree-bounds
+              'cpo-indent-tree)
             ()))
           (activate-visual-modifier-state
            outline
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-outline)
-               (cpd-estate-visual-clamped-modifier-tree-activate
-                'outline
-                'cpo-outline-tree-bounds))
+           (,(cpd-visual-clamped-modifier-tree-activator
+              'outline
+              'cpo-outline-tree-bounds
+              'cpo-outline)
             ()))
           (activate-visual-modifier-state
            cpo-treesitter-qd
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-treesitter-qd)
-               (cpd-estate-visual-clamped-modifier-tree-activate
-                'cpo-treesitter-qd
-                'cpo-treesitter-qd-bounds-of-thing-at-point))
+           (,(cpd-visual-clamped-modifier-tree-activator
+              'cpo-treesitter-qd
+              'cpo-treesitter-qd-bounds-of-thing-at-point
+              'cpo-treesitter-qd)
             ()))
           (activate-visual-modifier-state
            cpo-vi-like-word
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'cpo-vi-like-word))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'cpo-vi-like-word) ()))
           (activate-visual-modifier-state
            symbol
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'symbol))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'symbol) ()))
           (activate-visual-modifier-state
            sexp
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'sexp))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'sexp) ()))
           (activate-visual-modifier-state
            list
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'list))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'list) ()))
           (activate-visual-modifier-state
            sentence
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'sentence))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'sentence) ()))
           (activate-visual-modifier-state
            paragraph
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'paragraph))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'paragraph) ()))
           (activate-visual-modifier-state
            url
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-url-object)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'url))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'url 'cpo-url-object) ()))
           (activate-visual-modifier-state
            email
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-url-object)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'email))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'email 'cpo-url-object) ()))
           (activate-visual-modifier-state
            date-yyyy-mm-dd
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-date-object)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'cpo-date))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'cpo-date 'cpo-date-object) ()))
           (activate-visual-modifier-state
            cpo-comma-list
            ((alternate alternate))
-           (,(lambda ()
-               (require 'estate-visual-modifier-composiphrase-integration)
-               (require 'cpo-comma-list)
-               (cpd-estate-visual-clamped-modifier-basic-activate 'cpo-comma-list))
-            ()))
+           (,(cpd-visual-clamped-modifier-activator 'cpo-comma-list 'cpo-comma-list) ()))
 
 
           ;; (initiate-isearch region ((direction forward))

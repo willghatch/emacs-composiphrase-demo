@@ -8,6 +8,18 @@
 (require 'estate-visual-modifier-state)
 (require 'cpo-text-object-stuff)
 
+;; Early sentence-tracking infrastructure for the visual modifier
+;; expansion predicate.  This MUST be set up before key bindings are
+;; created (see demo-keys.el), because the predicate needs to know
+;; which commands are composiphrase sentence-building functions so it
+;; can avoid expanding the region for them.
+(defvar cpd--estate-visual-modifier-composiphrase-modification-functions
+  (make-hash-table :test 'eq :weakness 'key)
+  "Weak hash table tracking functions that modify composiphrase sentences.
+Keys are function objects, values are t.")
+
+
+
 (defvar estate-visual-modifier-composiphrase-movement-verbs '(move DEFAULT)
   "Verbs in composiphrase that indicate movements.")
 
@@ -35,10 +47,12 @@ Keys are function objects, values are t.")
     (funcall orig-fun sentence config)))
 
 (defun cpd--remove-estate-visual-modifier-advice ()
-  "Remove the composiphrase advice and this function from the exit hook."
+  "Remove the composiphrase-execute advice and this function from the exit hook.
+The sentence-tracking advice (on composiphrase-add-to-current-sentence-with-numeric-handling)
+is NOT removed here -- it must persist so that future key-binding lambdas
+are tracked for the expansion predicate."
   (when cpd--estate-visual-modifier-advice-active
     (advice-remove 'composiphrase-execute 'cpd--composiphrase-execute-advice)
-    (advice-remove 'composiphrase-add-to-current-sentence-with-numeric-handling 'cpd--composiphrase-add-to-sentence-advice)
     (setq cpd--estate-visual-modifier-advice-active nil))
   (remove-hook 'estate-visual-state-exit-hook 'cpd--remove-estate-visual-modifier-advice))
 
@@ -48,7 +62,7 @@ Keys are function objects, values are t.")
     (when (functionp result)
       (puthash result t cpd--estate-visual-modifier-composiphrase-modification-functions))
     result))
-;; This advice has to be loaded before I bind the keys and create all of these lambdas.
+;; This advice has to be loaded before we bind the keys and create all of the lambdas.
 (advice-add 'composiphrase-add-to-current-sentence-with-numeric-handling :around 'cpd--composiphrase-add-to-sentence-advice)
 
 (defun cpd--estate-visual-modifier-expansion-predicate (command)
@@ -64,6 +78,9 @@ This is a bit of a hack, but I want this to start working and this was the best 
 
 (setq estate-visual-modifier-expansion-command-predicate
       'cpd--estate-visual-modifier-expansion-predicate)
+(setq estate-visual-clamped-modifier-command-predicate
+      'cpd--estate-visual-modifier-expansion-predicate)
+
 
 (defun cpd--activate-estate-visual-modifier-hook ()
   "Activate the advice wrapper and set up cleanup on visual state exit."
@@ -148,5 +165,48 @@ TREE-BOUNDS-FUNC is a function of zero arguments returning (BEG . END)."
   (estate-visual-state-activate-clamped-modifier
    tree-name
    tree-bounds-func))
+
+;;; Activator helpers for composiphrase match tables.
+;;
+;; These create closures that lazily require this file, so the match
+;; table can be loaded without requiring the integration up front.
+
+(defun cpd-visual-modifier-activator (thing &rest extra-requires)
+  "Return a closure that lazily activates visual modifier for THING.
+THING is a symbol suitable for `cpd-estate-visual-modifier-basic-activate'.
+EXTRA-REQUIRES is a list of feature symbols to require before activation."
+  (lambda ()
+    (require 'estate-visual-modifier-composiphrase-integration)
+    (dolist (feat extra-requires) (require feat))
+    (cpd-estate-visual-modifier-basic-activate thing)))
+
+(defun cpd-visual-modifier-tree-activator (tree-name tree-modifier &rest extra-requires)
+  "Return a closure that lazily activates visual modifier for a tree type.
+TREE-NAME is the tree object symbol.
+TREE-MODIFIER is the tree modifier function symbol.
+EXTRA-REQUIRES is a list of feature symbols to require before activation."
+  (lambda ()
+    (require 'estate-visual-modifier-composiphrase-integration)
+    (dolist (feat extra-requires) (require feat))
+    (cpd-estate-visual-modifier-tree-activate tree-name tree-modifier)))
+
+(defun cpd-visual-clamped-modifier-activator (thing &rest extra-requires)
+  "Return a closure that lazily activates clamped modifier for THING.
+THING is a symbol suitable for `cpd-estate-visual-clamped-modifier-basic-activate'.
+EXTRA-REQUIRES is a list of feature symbols to require before activation."
+  (lambda ()
+    (require 'estate-visual-modifier-composiphrase-integration)
+    (dolist (feat extra-requires) (require feat))
+    (cpd-estate-visual-clamped-modifier-basic-activate thing)))
+
+(defun cpd-visual-clamped-modifier-tree-activator (tree-name tree-bounds-func &rest extra-requires)
+  "Return a closure that lazily activates clamped modifier for a tree type.
+TREE-NAME is the tree object symbol.
+TREE-BOUNDS-FUNC is the bounds function symbol.
+EXTRA-REQUIRES is a list of feature symbols to require before activation."
+  (lambda ()
+    (require 'estate-visual-modifier-composiphrase-integration)
+    (dolist (feat extra-requires) (require feat))
+    (cpd-estate-visual-clamped-modifier-tree-activate tree-name tree-bounds-func)))
 
 (provide 'estate-visual-modifier-composiphrase-integration)

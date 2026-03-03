@@ -30,9 +30,6 @@
 (require 'cpo-location-history)
 (cpo-location-history-mode 1)
 
-;; TODO - I don't know whether I want to require this up-front, but for the advice it adds, it needs to be loaded before creating all of the lambdas that modify the current command sentence.
-(require 'estate-visual-modifier-composiphrase-integration)
-
 ;; (setq cpo-paste-default-register ?P)
 ;; (setq cpo-copy-default-register ?P)
 ;; (setq cpo-copy-sync-with-kill-ring-register ?P)

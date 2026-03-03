@@ -824,4 +824,57 @@ to cover the word boundaries beyond the actual region."
       (setq-local estate--visual-modifier (list 'word my-func))
       (should (eq (estate--visual-get-modifier-function) my-func)))))
 
+;;; ================================================================
+;;; Activation functions targeted by activator closures
+;;; ================================================================
+
+;; The activator helper functions (cpd-visual-modifier-activator, etc.)
+;; live in estate-visual-modifier-composiphrase-integration.el and
+;; cannot be tested here because they require composiphrase.  We test
+;; the underlying activation functions they target.
+
+(ert-deftest test-vm-activator-closure-activates-word-modifier ()
+  "The activation function that an activator closure targets works correctly."
+  (with-temp-buffer
+    (insert "hello world test")
+    (goto-char (point-min))
+    (test-vm--forward-to-text-beg "world")
+    (test-vm--setup-estate)
+    (estate-visual-state)
+    (set-mark (point))
+    (activate-mark)
+    (test-vm--forward-to-text-end "world")
+    ;; Simulate what the activator does: activate a word modifier
+    (estate-visual-state-activate-modifier
+     (list 'word
+           (lambda (region-beg region-end)
+             (let* ((beg-bounds (save-excursion
+                                  (goto-char region-beg)
+                                  (bounds-of-thing-at-point 'word)))
+                    (end-bounds (save-excursion
+                                  (goto-char region-end)
+                                  (bounds-of-thing-at-point 'word)))
+                    (new-beg (if beg-bounds (car beg-bounds) region-beg))
+                    (new-end (if end-bounds (cdr end-bounds) region-end)))
+               (list new-beg new-end)))))
+    (should (not (null estate--visual-modifier)))
+    (should (eq estate-state 'visual))))
+
+(ert-deftest test-vm-activator-closure-activates-clamped ()
+  "The clamped activation function that a clamped activator targets works correctly."
+  (with-temp-buffer
+    (insert "hello world test")
+    (goto-char (point-min))
+    (test-vm--forward-to-text-beg "world")
+    (test-vm--setup-estate)
+    ;; Simulate what the clamped activator does
+    (estate-visual-state-activate-clamped-modifier
+     'word
+     (lambda ()
+       (bounds-of-thing-at-point 'word)))
+    (should estate--visual-clamped-modifier-active)
+    (should (eq estate-state 'visual))
+    ;; Mark should be at point
+    (should (= (mark) (point)))))
+
 (provide 'test-visual-modes)
