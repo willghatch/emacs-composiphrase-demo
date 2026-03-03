@@ -748,8 +748,14 @@ The command also executes the sentence, with region as the object, if the region
          (funcall (cp/add (cp/mod 'alternate 'alternate)) n))
    "alternate" :exit nil) ;; For object-specific alternate behavior...
   ("A" (lambda (n) (interactive "p")
-         (funcall (cp/add (cp/mod 'alternate 2)) n))
+         (funcall (cp/add (cp/mod 'alternate-2 'alternate-2)) n))
    "alternate-2" :exit nil)
+  ("v" (lambda (n) (interactive "p")
+         (funcall (cp/add (cp/mod 'verb-alternate 'verb-alternate)) n))
+   "verb-alt" :exit nil)
+  ("V" (lambda (n) (interactive "p")
+         (funcall (cp/add (cp/mod 'verb-alternate-2 'verb-alternate-2)) n))
+   "verb-alt-2" :exit nil)
 
   ("hR" (lambda (n) (interactive "p")
           (funcall (cp/add (cp/mod 'respect-tree 'respect-tree)) n))

@@ -74,7 +74,7 @@
           (tree-raise)
           (change-delimiter) ;; This really only makes sense for a few things... how many operators do I want to have that aren't really composable?  That said, it's a common operation, so I want it to be convenient in the layout even if it doesn't apply to most objects.
           (action) ;; IE some object-specific action that makes sense for the object's context.
-          (activate-visual-modifier-state (alternate . ,nil))
+          (activate-visual-modifier-state (verb-alternate . ,nil))
           ;; TODO - something like insert-move, eg. vi's I and A move to a useful place before inserting, which is useful for command repetition.  I can encapsulate a move then an edit with macros, which I want to use more frequently and have easily accessible.  But the command repetition of evil-mode is just so convenient, and if I implement something similar it would be nice to have a “move to relevant location then insert” as a single command to be captured for repetition.
           ;; TODO - what verbs?  Tree promote/demote, but eg. for paren trees we care about which kind of paren/bracket/brace/etc is used, or for xml we need a specific tag.  Tree splice - works for symex and xml, but less clearly useful for outline-mode or indent trees.  Tree change node type, eg. symex change paren type, xml change tag.  Tree raise - IE replace parent with child, except I'm used to the workflow of select-element, copy, expand to parent, paste.
           ;; TODO - there are many commands that can operate on a region, and any of them could be put into the map similar to delete, change, yank, upcase, etc.  Examples: eval-region, fill-region, center-region, indent-region, ispell-region, flyspsell-region, comment-region, uncomment-region, printify-region (replace non-printing characters), ... many silly ones: print-region, kkc-region, rot13-region, morse-region, unmorse-region, nato-region, denato-region, encrypt/decrypt region, base64-encode/decode, ... most of these, even the ones that are less silly, are probably not very useful to have in the composable command map, because you wouldn't really care to use them on the various text objects.
@@ -183,10 +183,10 @@
                 ((direction forward) (alternate alternate))
                 (rmo/cpo-location-history-local-forward (num)))
           (move location-history
-                ((direction backward) (alternate 2))
+                ((direction backward) (alternate-2 alternate-2))
                 (rmo/cpo-location-history-non-local-back (num)))
           (move location-history
-                ((direction forward) (alternate 2))
+                ((direction forward) (alternate-2 alternate-2))
                 (rmo/cpo-location-history-non-local-forward (num)))
 
           ;; These git-gutter commands don't do everything I would like here, but they are close enough to include for now.
@@ -938,19 +938,19 @@
                         sentence-with-defaults))
           (activate-visual-modifier-state
            line
-           ((alternate ,nil) (inner ,nil))
+           ((verb-alternate ,nil) (inner ,nil))
            (,(cpd-visual-modifier-activator 'line) ()))
           (activate-visual-modifier-state
            line
-           ((alternate ,nil) (inner inner))
+           ((verb-alternate ,nil) (inner inner))
            (,(cpd-visual-modifier-activator 'cpo-line-no-newline) ()))
           (activate-visual-modifier-state
            word
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'word) ()))
           (activate-visual-modifier-state
            cpo-smartparens
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-tree-activator
               'cpo-smartparens
               'cpo-smartparens-estate-visual-modifier
@@ -958,7 +958,7 @@
             ()))
           (activate-visual-modifier-state
            cpo-indent-tree
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-tree-activator
               'cpo-indent-tree
               'cpo-indent-tree-estate-visual-modifier
@@ -966,7 +966,7 @@
             ()))
           (activate-visual-modifier-state
            outline
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-tree-activator
               'outline
               'cpo-outline-estate-visual-modifier
@@ -974,7 +974,7 @@
             ()))
           (activate-visual-modifier-state
            cpo-treesitter-qd
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-tree-activator
               'cpo-treesitter-qd
               'cpo-treesitter-qd-estate-visual-modifier
@@ -982,64 +982,64 @@
             ()))
           (activate-visual-modifier-state
            cpo-vi-like-word
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'cpo-vi-like-word) ()))
           (activate-visual-modifier-state
            symbol
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'symbol) ()))
           (activate-visual-modifier-state
            sexp
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'sexp) ()))
           (activate-visual-modifier-state
            list
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'list) ()))
           (activate-visual-modifier-state
            sentence
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'sentence) ()))
           (activate-visual-modifier-state
            paragraph
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'paragraph) ()))
           (activate-visual-modifier-state
            url
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'url 'cpo-url-object) ()))
           (activate-visual-modifier-state
            email
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'email 'cpo-url-object) ()))
           (activate-visual-modifier-state
            date-yyyy-mm-dd
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'cpo-date 'cpo-date-object) ()))
           (activate-visual-modifier-state
            cpo-comma-list
-           ((alternate ,nil))
+           ((verb-alternate ,nil))
            (,(cpd-visual-modifier-activator 'cpo-comma-list 'cpo-comma-list) ()))
 
           ;; Visual clamped modifier mode entries.
-          ;; Distinguished from regular visual-modifier by the alternate modifier.
+          ;; Distinguished from regular visual-modifier by the verb-alternate modifier.
           ;; In clamped mode, both mark and point track the text object at the
           ;; current position, creating a "moving highlight" effect.
           (activate-visual-modifier-state
            line
-           ((alternate alternate) (inner ,nil))
+           ((verb-alternate verb-alternate) (inner ,nil))
            (,(cpd-visual-clamped-modifier-activator 'line) ()))
           (activate-visual-modifier-state
            line
-           ((alternate alternate) (inner inner))
+           ((verb-alternate verb-alternate) (inner inner))
            (,(cpd-visual-clamped-modifier-activator 'cpo-line-no-newline) ()))
           (activate-visual-modifier-state
            word
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'word) ()))
           (activate-visual-modifier-state
            cpo-smartparens
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-tree-activator
               'cpo-smartparens
               'cpo-smartparens--bounds-of-sexp-at-point
@@ -1047,7 +1047,7 @@
             ()))
           (activate-visual-modifier-state
            cpo-indent-tree
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-tree-activator
               'cpo-indent-tree
               'cpo-indent-tree-bounds
@@ -1055,7 +1055,7 @@
             ()))
           (activate-visual-modifier-state
            outline
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-tree-activator
               'outline
               'cpo-outline-tree-bounds
@@ -1063,7 +1063,7 @@
             ()))
           (activate-visual-modifier-state
            cpo-treesitter-qd
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-tree-activator
               'cpo-treesitter-qd
               'cpo-treesitter-qd-bounds-of-thing-at-point
@@ -1071,43 +1071,43 @@
             ()))
           (activate-visual-modifier-state
            cpo-vi-like-word
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'cpo-vi-like-word) ()))
           (activate-visual-modifier-state
            symbol
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'symbol) ()))
           (activate-visual-modifier-state
            sexp
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'sexp) ()))
           (activate-visual-modifier-state
            list
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'list) ()))
           (activate-visual-modifier-state
            sentence
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'sentence) ()))
           (activate-visual-modifier-state
            paragraph
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'paragraph) ()))
           (activate-visual-modifier-state
            url
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'url 'cpo-url-object) ()))
           (activate-visual-modifier-state
            email
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'email 'cpo-url-object) ()))
           (activate-visual-modifier-state
            date-yyyy-mm-dd
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'cpo-date 'cpo-date-object) ()))
           (activate-visual-modifier-state
            cpo-comma-list
-           ((alternate alternate))
+           ((verb-alternate verb-alternate))
            (,(cpd-visual-clamped-modifier-activator 'cpo-comma-list 'cpo-comma-list) ()))
 
 
