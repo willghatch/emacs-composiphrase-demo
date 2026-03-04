@@ -30,6 +30,16 @@
                (max orig-point new-point)
                (and pass-sentence (list sentence-with-defaults)))))))
 
+;; TODO - this is a temporary hack because not all region expanders have position arguments yet.  But I'll leave it for now until we add them, because at least it signposts which ones still need position arguments.
+(defun composiphrase-demo--set-expand-region-position (location-within)
+  "After an expand-region call that leaves point at the beginning,
+adjust point/mark according to LOCATION-WITHIN.
+LOCATION-WITHIN \\='end moves point to end and mark to beginning.
+Any other value (nil, \\='beginning, or anything else) leaves point
+at the beginning (no change)."
+  (when (and (eq location-within 'end) (region-active-p))
+    (exchange-point-and-mark)))
+
 (setq composiphrase-demo-match-config
       `((verbs
          .
@@ -196,11 +206,14 @@
 
           (move buffer
                 ((direction expand-region))
-                (,(lambda ()
+                (,(lambda (location-within)
                     (activate-mark)
-                    (set-mark (point-min))
-                    (goto-char (point-max)))
-                 ()))
+                    (if (eq location-within 'end)
+                        (progn (set-mark (point-min))
+                               (goto-char (point-max)))
+                      (set-mark (point-max))
+                      (goto-char (point-min))))
+                 (location-within)))
           (move buffer ((direction forward) (location-within ,nil)) (,(lambda () (goto-char (point-max))) ()))
           (move buffer ((direction backward) (location-within ,nil)) (,(lambda (x) (goto-char x)) (num)))
           (move buffer ((location-within beginning)) (,(lambda () (goto-char (point-min))) ()))
@@ -238,7 +251,7 @@
           ;; TODO - I really want more kinds of word objects, eg. to select camelCase word parts, to transpose them keeping the overall casing correct, etc.  Is there a useful way that I can specify ad-hoc word types and what delimiters should be allowed?  Eg. people use each of camelCase, snake_case, kebab-case, and more.  Sometimes they are mixed together or with extra separators like / or sigils, and can have ad-hoc meaning for the hierarchy of the different groupings.  Some people balk at mixing, but using more than one kind of case can be useful and meaningful, and sometimes mixing is out of your hands.  But I want tools to easily use all of these and select sub-parts at different levels of granularity.
           (move word
                 ((direction expand-region))
-                (cpo-expand-region-to-word ()))
+                (,(lambda (location-within) (cpo-expand-region-to-word :position location-within)) (location-within)))
           (move word
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-word-beginning (num)))
@@ -260,7 +273,7 @@
 
           (move cpo-vi-like-word
                 ((direction expand-region))
-                (cpo-expand-region-to-cpo-vi-like-word ()))
+                (,(lambda (location-within) (cpo-expand-region-to-cpo-vi-like-word :position location-within)) (location-within)))
           (move cpo-vi-like-word
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-cpo-vi-like-word-beginning (num)))
@@ -276,7 +289,7 @@
 
           (move cpo-camel-case-sub-word
                 ((direction expand-region))
-                (cpo-expand-region-to-camel-case-sub-word ()))
+                (,(lambda (location-within) (cpo-expand-region-to-camel-case-sub-word :position location-within)) (location-within)))
           (move cpo-camel-case-sub-word
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-camel-case-sub-word-beginning (num)))
@@ -292,7 +305,7 @@
 
           (move symbol
                 ((direction expand-region))
-                (cpo-expand-region-to-symbol ()))
+                (,(lambda (location-within) (cpo-expand-region-to-symbol :position location-within)) (location-within)))
           (move symbol
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-symbol-beginning (num)))
@@ -314,7 +327,7 @@
 
           (move sexp
                 ((direction expand-region))
-                (cpo-expand-region-to-sexp ()))
+                (,(lambda (location-within) (cpo-expand-region-to-sexp :position location-within)) (location-within)))
           (move sexp
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-sexp-beginning (num)))
@@ -336,7 +349,7 @@
 
           (move list
                 ((direction expand-region))
-                (cpo-expand-region-to-list ()))
+                (,(lambda (location-within) (cpo-expand-region-to-list :position location-within)) (location-within)))
           (move list
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-list-beginning (num)))
@@ -359,7 +372,7 @@
 
           (move sentence
                 ((direction expand-region))
-                (cpo-expand-region-to-sentence ()))
+                (,(lambda (location-within) (cpo-expand-region-to-sentence :position location-within)) (location-within)))
           (move sentence
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-sentence-beginning (num)))
@@ -381,7 +394,7 @@
 
           (move paragraph
                 ((direction expand-region))
-                (cpo-expand-region-to-paragraph ()))
+                (,(lambda (location-within) (cpo-expand-region-to-paragraph :position location-within)) (location-within)))
           (move paragraph
                 ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-paragraph-beginning (num)))
@@ -409,10 +422,10 @@
                 (cpo-goto-line-default-first (num)))
           (move line
                 ((direction expand-region) (inner inner))
-                (,(lambda () (cpo-expand-region-to-fill-lines nil)) ()))
+                (,(lambda (location-within) (cpo-expand-region-to-fill-lines nil :position location-within)) (location-within)))
           (move line
                 ((direction expand-region) (inner ,nil))
-                (,(lambda () (cpo-expand-region-to-fill-lines t)) ()))
+                (,(lambda (location-within) (cpo-expand-region-to-fill-lines t :position location-within)) (location-within)))
           ;; TODO - alternate for back-to-indentation?  I don't love it, but I want this somewhere.
           (move line
                 ((direction backward) (alternate alternate))
@@ -443,31 +456,31 @@
           ;; TODO - for all trees, make absolute movement go to the Nth sibling.
           (move cpo-smartparens
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-smartparens-select-root ()))
+                (,(lambda (location-within) (cpo-smartparens-select-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-smartparens
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-smartparens-up-to-root ()))
+                (,(lambda (location-within) (cpo-smartparens-up-to-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-smartparens
                 ((direction expand-region) (inner ,nil) (delimiter any) (tree-vertical ,nil))
-                (rmo/cpo-smartparens-expand-region-to-any-delimiter (num)))
+                (,(lambda (num location-within) (cpo-smartparens-expand-region-to-any-delimiter num :position location-within)) (num location-within)))
           (move cpo-smartparens
                 ((direction expand-region) (inner inner) (delimiter any) (tree-vertical ,nil))
-                (rmo/cpo-smartparens-expand-region/children-region (num)))
+                (,(lambda (num location-within) (cpo-smartparens-expand-region/children-region num :position location-within)) (num location-within)))
 
           (move cpo-smartparens
                 ((direction expand-region) (tree-vertical ,nil) (inner ,nil)
                  (delimiter t ,(lambda (actual expected) (stringp actual))))
-                (cpo-smartparens-expand-region-to-delimiter (delimiter num)))
+                (,(lambda (delimiter num location-within) (cpo-smartparens-expand-region-to-delimiter delimiter num :position location-within)) (delimiter num location-within)))
           (move cpo-smartparens
                 ((direction expand-region) (tree-vertical ,nil) (inner inner) (delimiter t ,(lambda (actual expected) (stringp actual))))
-                (cpo-smartparens-expand-region-to-delimiter/children-region (delimiter num)))
+                (,(lambda (delimiter num location-within) (cpo-smartparens-expand-region-to-delimiter/children-region delimiter num :position location-within)) (delimiter num location-within)))
 
           (move cpo-smartparens
                 ((direction expand-region) (tree-vertical ,nil) (inner ,nil) (delimiter ,nil))
-                (rmo/cpo-smartparens-expand-region (num)))
+                (,(lambda (num location-within) (cpo-smartparens-expand-region num :position location-within)) (num location-within)))
           (move cpo-smartparens
                 ((direction expand-region) (tree-vertical ,nil) (inner inner) (delimiter ,nil))
-                (rmo/cpo-smartparens-expand-region/children-region (num)))
+                (,(lambda (num location-within) (cpo-smartparens-expand-region/children-region num :position location-within)) (num location-within)))
 
           (move cpo-smartparens
                 ((direction forward) (tree-vertical ,nil) (tree-traversal inorder))
@@ -564,16 +577,16 @@
 
           (move cpo-treesitter-qd
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-treesitter-qd-select-root ()))
+                (,(lambda (location-within) (cpo-treesitter-qd-select-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-treesitter-qd
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-treesitter-qd-up-to-root ()))
+                (,(lambda (location-within) (cpo-treesitter-qd-up-to-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-treesitter-qd
                 ((direction expand-region) (tree-vertical ,nil) (inner ,nil))
-                (rmo/cpo-treesitter-qd-expand-region (num)))
+                (,(lambda (num location-within) (cpo-treesitter-qd-expand-region num :position location-within)) (num location-within)))
           (move cpo-treesitter-qd
                 ((direction expand-region) (tree-vertical ,nil) (inner inner))
-                (rmo/cpo-treesitter-qd-expand-region/children-region (num)))
+                (,(lambda (num location-within) (cpo-treesitter-qd-expand-region/children-region num :position location-within)) (num location-within)))
 
           (move cpo-treesitter-qd
                 ((direction forward) (tree-traversal inorder))
@@ -618,16 +631,16 @@
 
           (move outline
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-outline-select-root ()))
+                (,(lambda (location-within) (cpo-outline-select-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move outline
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-outline-up-to-root ()))
+                (,(lambda (location-within) (cpo-outline-up-to-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move outline
                 ((direction expand-region) (tree-vertical ,nil) (inner ,nil))
-                (rmo/cpo-outline-expand-region (num)))
+                (,(lambda (num location-within) (cpo-outline-expand-region num :position location-within)) (num location-within)))
           (move outline
                 ((direction expand-region) (tree-vertical ,nil) (inner inner))
-                (rmo/cpo-outline-expand-region/children-region (num)))
+                (,(lambda (num location-within) (cpo-outline-expand-region/children-region num :position location-within)) (num location-within)))
           (move outline
                 ((direction forward) (tree-traversal inorder))
                 (rmo/cpo-outline-inorder-traversal-forward (num)))
@@ -666,17 +679,17 @@
           (move cpo-indent-tree
                 ;; TODO - the modifiers aren't correct, but I'm not sure where to shoehorn this in, so I'm going to roll with this for now.
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-indent-tree-select-root ()))
+                (,(lambda (location-within) (cpo-indent-tree-select-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-indent-tree
                 ;; TODO - the modifiers aren't correct, but I'm not sure where to shoehorn this in, so I'm going to roll with this for now.
                 ((tree-vertical up) (direction expand-region) (inner ,nil))
-                (cpo-indent-tree-up-to-root ()))
+                (,(lambda (location-within) (cpo-indent-tree-up-to-root) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-indent-tree
                 ((direction expand-region) (tree-vertical ,nil) (inner ,nil))
-                (rmo/cpo-indent-tree-expand-region (num)))
+                (,(lambda (num location-within) (cpo-indent-tree-expand-region num :position location-within)) (num location-within)))
           (move cpo-indent-tree
                 ((direction expand-region) (tree-vertical ,nil) (inner inner))
-                (rmo/cpo-indent-tree-expand-region/children-region (num)))
+                (,(lambda (num location-within) (cpo-indent-tree-expand-region/children-region num :position location-within)) (num location-within)))
           (move cpo-indent-tree
                 ((direction forward) (tree-traversal inorder))
                 (rmo/cpo-indent-tree-inorder-traversal-forward (num)))
@@ -712,7 +725,7 @@
           (tree-raise cpo-smartparens () (cpo-smartparens-raise ()))
 
           (move url ((direction expand-region))
-                (cpo-expand-region-to-url))
+                (,(lambda (location-within) (cpo-expand-region-to-url :position location-within)) (location-within)))
           (move url ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-url-beginning (num)))
           (move url ((direction backward) (location-within beginning))
@@ -722,7 +735,7 @@
           (move url ((direction backward) (location-within end))
                 (rmo/cpo-backward-url-end (num)))
           (move email ((direction expand-region))
-                (cpo-expand-region-to-email))
+                (,(lambda (location-within) (cpo-expand-region-to-email :position location-within)) (location-within)))
           (move email ((direction forward) (location-within beginning))
                 (rmo/cpo-forward-email-beginning (num)))
           (move email ((direction backward) (location-within beginning))
@@ -733,7 +746,7 @@
                 (rmo/cpo-backward-email-end (num)))
 
           (move date-yyyy-mm-dd ((direction expand-region) (alternate ,nil))
-                (cpo-expand-region-to-cpo-date))
+                (,(lambda (location-within) (cpo-expand-region-to-cpo-date :position location-within)) (location-within)))
           (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate ,nil))
                 (rmo/cpo-forward-date-beginning (num)))
           (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate ,nil))
@@ -745,7 +758,7 @@
 
           ;; Date-time configurations - use alternate modifier to select datetime instead of date
           (move date-yyyy-mm-dd ((direction expand-region) (alternate alternate))
-                (cpo-expand-region-to-cpo-datetime))
+                (,(lambda (location-within) (cpo-expand-region-to-cpo-datetime :position location-within)) (location-within)))
           (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate alternate))
                 (rmo/cpo-forward-datetime-beginning (num)))
           (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate alternate))
@@ -756,7 +769,7 @@
                 (rmo/cpo-backward-datetime-end (num)))
 
           (move cpo-comma-list ((direction expand-region))
-                (cpo-comma-list-expand-region ()))
+                (,(lambda (location-within) (cpo-comma-list-expand-region :position location-within)) (location-within)))
           (move cpo-comma-list ((direction forward) (location-within beginning))
                 (rmo/cpo-comma-list-forward-beginning (num)))
           (move cpo-comma-list ((direction backward) (location-within beginning))
