@@ -88,6 +88,7 @@
                      )
           (word (default-verb . move) (location-within . beginning))
           (cpo-vi-like-word (default-verb . move) (location-within . beginning))
+          (cpo-camel-case-sub-word (default-verb . move) (location-within . beginning))
           (sentence (default-verb . move) (location-within . beginning))
           (paragraph (default-verb . move) (location-within . beginning))
           (line (default-verb . move) (location-within . beginning))
@@ -272,6 +273,22 @@
           (move cpo-vi-like-word
                 ((direction backward) (location-within end))
                 (rmo/cpo-backward-cpo-vi-like-word-end (num)))
+
+          (move cpo-camel-case-sub-word
+                ((direction expand-region))
+                (cpo-expand-region-to-camel-case-sub-word ()))
+          (move cpo-camel-case-sub-word
+                ((direction forward) (location-within beginning))
+                (rmo/cpo-forward-camel-case-sub-word-beginning (num)))
+          (move cpo-camel-case-sub-word
+                ((direction backward) (location-within beginning))
+                (rmo/cpo-backward-camel-case-sub-word-beginning (num)))
+          (move cpo-camel-case-sub-word
+                ((direction forward) (location-within end))
+                (rmo/cpo-forward-camel-case-sub-word-end (num)))
+          (move cpo-camel-case-sub-word
+                ((direction backward) (location-within end))
+                (rmo/cpo-backward-camel-case-sub-word-end (num)))
 
           (move symbol
                 ((direction expand-region))
