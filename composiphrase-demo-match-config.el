@@ -720,9 +720,11 @@ at the beginning (no change)."
                 (rmo/cpo-indent-tree-down-to-last-child (num)))
           (promote cpo-indent-tree () (cpo-indent-tree-promote ()))
           (demote cpo-indent-tree () (cpo-indent-tree-demote ()))
-          (tree-raise cpo-indent-tree () (cpo-indent-tree-raise ()))
 
+          (tree-raise cpo-indent-tree () (cpo-indent-tree-raise ()))
           (tree-raise cpo-smartparens () (cpo-smartparens-raise ()))
+          (tree-raise outline () (cpo-outline-raise ()))
+          (tree-raise cpo-treesitter-qd () (cpo-treesitter-qd-raise ()))
 
           (move url ((direction expand-region))
                 (,(lambda (location-within) (cpo-expand-region-to-url :position location-within)) (location-within)))
