@@ -108,6 +108,7 @@ at the beginning (no change)."
           (cpo-smartparens (default-verb . move) (location-within . beginning) (respect-tree . respect-tree) (delimiter . ,nil))
           (cpo-indent-tree (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
           (outline (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
+          (cpo-outline-heading (default-verb . move) (location-within . beginning))
           (cpo-treesitter-qd (default-verb . move) (location-within . anchor) (respect-tree . respect-tree)) ;; IE treesitter generic handler
           ;; TODO - other tree-sitter things that are more tuned to the language.  Well, maybe it would be good to have the generic cpo-treesitter-qd and a more specific one on the same map, where the specific one pulls in some language config.  I think it's likely worthwhile to still keep a generic one in the map, though.
           (region)
@@ -675,6 +676,32 @@ at the beginning (no change)."
           (barf outline
                 ((direction forward))
                 (cpo-outline-forward-barf-heading ()))
+
+          ;; cpo-outline-heading -- heading line object (not tree-shaped like outline)
+          (move cpo-outline-heading
+                ((direction expand-region) (inner ,nil) (alternate ,nil) (alternate-2 ,nil))
+                (,(lambda (location-within) (cpo-outline-heading-select) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
+          (move cpo-outline-heading
+                ((direction expand-region) (inner inner) (alternate ,nil) (alternate-2 ,nil))
+                (,(lambda (location-within) (cpo-outline-heading-select-inner) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
+          (move cpo-outline-heading
+                ((direction expand-region) (alternate alternate) (alternate-2 ,nil))
+                (,(lambda (location-within) (cpo-outline-heading-select-body) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
+          (move cpo-outline-heading
+                ((direction expand-region) (alternate ,nil) (alternate-2 alternate-2))
+                (,(lambda (location-within) (cpo-outline-heading-select-prefix) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
+          (move cpo-outline-heading
+                ((direction forward) (location-within beginning))
+                (rmo/cpo-outline-heading-forward-beginning (num)))
+          (move cpo-outline-heading
+                ((direction backward) (location-within beginning))
+                (rmo/cpo-outline-heading-backward-beginning (num)))
+          (move cpo-outline-heading
+                ((direction forward) (location-within end))
+                (rmo/cpo-outline-heading-forward-end (num)))
+          (move cpo-outline-heading
+                ((direction backward) (location-within end))
+                (rmo/cpo-outline-heading-backward-end (num)))
 
           (move cpo-indent-tree
                 ;; TODO - the modifiers aren't correct, but I'm not sure where to shoehorn this in, so I'm going to roll with this for now.
