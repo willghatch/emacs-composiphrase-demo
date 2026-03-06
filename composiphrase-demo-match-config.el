@@ -532,10 +532,16 @@ at the beginning (no change)."
                 ((direction backward) (tree-vertical up) (inner inner))
                 (rmo/sp-beginning-of-sexp (num)))
           (slurp cpo-smartparens
-                 ((direction forward))
+                 ((direction forward) (verb-alternate verb-alternate))
+                 (cpo-smartparens-forward-slurp-all ()))
+          (slurp cpo-smartparens
+                 ((direction backward) (verb-alternate verb-alternate))
+                 (cpo-smartparens-backward-slurp-all ()))
+          (slurp cpo-smartparens
+                 ((direction forward) (verb-alternate ,nil))
                  (cpo-smartparens-forward-slurp (num)))
           (slurp cpo-smartparens
-                 ((direction backward))
+                 ((direction backward) (verb-alternate ,nil))
                  (cpo-smartparens-backward-slurp (num)))
           (barf cpo-smartparens
                 ((direction forward))
@@ -745,6 +751,18 @@ at the beginning (no change)."
           (move cpo-indent-tree
                 ((tree-vertical down) (direction forward))
                 (rmo/cpo-indent-tree-down-to-last-child (num)))
+          (slurp cpo-indent-tree
+                 ((direction forward) (verb-alternate verb-alternate))
+                 (cpo-indent-tree-slurp-all-forward ()))
+          (slurp cpo-indent-tree
+                 ((direction backward) (verb-alternate verb-alternate))
+                 (cpo-indent-tree-slurp-all-backward ()))
+          (slurp cpo-indent-tree
+                 ((direction forward) (verb-alternate ,nil))
+                 (cpo-indent-tree-forward-slurp ()))
+          (slurp cpo-indent-tree
+                 ((direction backward) (verb-alternate ,nil))
+                 (cpo-indent-tree-backward-slurp ()))
           (promote cpo-indent-tree () (cpo-indent-tree-promote ()))
           (demote cpo-indent-tree () (cpo-indent-tree-demote ()))
 
