@@ -109,6 +109,7 @@ at the beginning (no change)."
           (cpo-indent-tree (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
           (outline (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
           (cpo-outline-heading (default-verb . move) (location-within . beginning))
+          (org-structure-block (default-verb . move) (location-within . beginning))
           (cpo-treesitter-qd (default-verb . move) (location-within . anchor) (respect-tree . respect-tree)) ;; IE treesitter generic handler
           ;; TODO - other tree-sitter things that are more tuned to the language.  Well, maybe it would be good to have the generic cpo-treesitter-qd and a more specific one on the same map, where the specific one pulls in some language config.  I think it's likely worthwhile to still keep a generic one in the map, though.
           (region)
@@ -740,6 +741,29 @@ at the beginning (no change)."
           (move cpo-outline-heading
                 ((direction backward) (location-within end))
                 (rmo/cpo-outline-heading-backward-end (num)))
+
+          ;; org-structure-block -- org #+begin_/#+end_ blocks
+          (move org-structure-block
+                ((direction expand-region) (alternate ,nil))
+                (,(lambda (location-within) (cpo-org-structure-block-expand-region :position location-within)) (location-within)))
+          (move org-structure-block
+                ((direction expand-region) (alternate alternate))
+                (,(lambda (location-within) (cpo-org-structure-block-expand-region-inner :position location-within)) (location-within)))
+          (move org-structure-block
+                ((direction forward) (location-within beginning))
+                (rmo/cpo-org-structure-block-forward-beginning (num)))
+          (move org-structure-block
+                ((direction backward) (location-within beginning))
+                (rmo/cpo-org-structure-block-backward-beginning (num)))
+          (move org-structure-block
+                ((direction forward) (location-within end))
+                (rmo/cpo-org-structure-block-forward-end (num)))
+          (move org-structure-block
+                ((direction backward) (location-within end))
+                (rmo/cpo-org-structure-block-backward-end (num)))
+          (open org-structure-block
+                ()
+                (,(lambda () (estate-insert-state-with-thunk 'cpo-org-structure-block-open)) ()))
 
           (move cpo-indent-tree
                 ;; TODO - the modifiers aren't correct, but I'm not sure where to shoehorn this in, so I'm going to roll with this for now.
