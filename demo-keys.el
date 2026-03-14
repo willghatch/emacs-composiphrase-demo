@@ -602,7 +602,7 @@ The command also executes the sentence, with region as the object, if the region
           (funcall (cp/ae (cp/obj 'buffer-change)) n))
    "buffer-change" :exit t)
   ("hg" (lambda (n) (interactive "p")
-          (funcall (cp/ae (cp/obj 'vcs-change)) n))
+          (funcall (cp/ae (progn (require 'cpo-git-gutter) (cp/obj 'vcs-change))) n))
    "vcs-change" :exit t)
   ("H" (lambda (n) (interactive "p")
          (funcall (cp/ae (cp/obj 'location-history)) n))
