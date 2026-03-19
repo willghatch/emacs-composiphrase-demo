@@ -741,6 +741,8 @@ at the beginning (no change)."
           (move cpo-outline-heading
                 ((direction backward) (location-within end))
                 (rmo/cpo-outline-heading-backward-end (num)))
+          (promote cpo-outline-heading () (cpo-outline-heading-promote ()))
+          (demote cpo-outline-heading () (cpo-outline-heading-demote ()))
 
           ;; org-structure-block -- org #+begin_/#+end_ blocks
           (move org-structure-block
