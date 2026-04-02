@@ -688,11 +688,19 @@ at the beginning (no change)."
                 ((direction backward) (tree-traversal inorder))
                 (rmo/cpo-outline-inorder-traversal-backward (num)))
           (move outline
-                ((direction forward) (location-within beginning) (tree-vertical ,nil))
-                (rmo/outline-forward-same-level (num)))
+                ((direction forward) (location-within beginning) (tree-vertical ,nil) (tree-traversal ,nil) (respect-tree respect-tree))
+                (rmo/cpo-outline-tree-forward-beginning (num)))
           (move outline
-                ((direction backward) (location-within beginning) (tree-vertical ,nil))
-                (rmo/outline-backward-same-level (num)))
+                ((direction backward) (location-within beginning) (tree-vertical ,nil) (tree-traversal ,nil) (respect-tree respect-tree))
+                (rmo/cpo-outline-tree-backward-beginning (num)))
+          (move outline
+                ((direction forward) (location-within end) (tree-vertical ,nil) (tree-traversal ,nil) (respect-tree respect-tree))
+                (rmo/cpo-outline-tree-forward-end (num)))
+          (move outline
+                ((direction backward) (location-within end) (tree-vertical ,nil) (tree-traversal ,nil) (respect-tree respect-tree))
+                (rmo/cpo-outline-tree-backward-end (num)))
+          ;; TODO - make outline movements with disrespect-tree use the cpo-outline-heading movements.  I started a branch to add a configurable pre-matching stage to composiphrase which should make these kinds of translations easier to make configurable, but I need to finish that.
+
           (move outline
                 ((tree-vertical up))
                 (rmo/outline-up-heading (num)))
