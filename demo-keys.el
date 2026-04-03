@@ -623,7 +623,7 @@ The command also executes the sentence, with region as the object, if the region
           (funcall (cp/ae (cp/obj 'phone-number)) n))
    "phone-number" :exit t)
   ("hf" (lambda (n) (interactive "p")
-          (funcall (cp/ae (cp/obj 'file-name)) n))
+          (funcall (cp/ae (progn (require 'cpo-file-path-object) (cp/obj 'cpo-file-path-object))) n))
    "file-name" :exit t)
   ("hb" (lambda (n) (interactive "p")
           (funcall (cp/ae (progn (require 'cpo-org-structure-block) (cp/obj 'org-structure-block))) n))

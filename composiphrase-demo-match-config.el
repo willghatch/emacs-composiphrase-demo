@@ -118,6 +118,7 @@ at the beginning (no change)."
           ;; TODO - the implementations of these are pretty egregious.  Selection is ok, but I also wanted movement, so I just wrote something quick and dirty and extremely slow.  Ideally every kind of object would at least support movement and selection.
           (url (default-verb . move) (location-within . beginning))
           (email (default-verb . move) (location-within . beginning))
+          (cpo-file-path-object (default-verb . move) (location-within . beginning) (alternate . ,nil))
 
 
           ;; These are not really “text objects”, but I want composition with delete, change, yank, etc, to work with these.
@@ -144,7 +145,6 @@ at the beginning (no change)."
           ;; TODO - it would be nice to have options for basically any kind of thing that can have its bounds given and can be searched for to move forward/backward to a next one.
           (phone-number)
           (tracking-number)
-          (file-name (default-verb . move))
           (date-yyyy-mm-dd (default-verb . move) (location-within . beginning))
           (cpo-comma-list (default-verb . move) (location-within . beginning))
           ;; TODO - I want modifiers for respecting or not respecting tree bounds.  Eg. I typically want go-to-sibling for tree things that don't go out to cousin nodes.  But sometimes it is convenient to just go to the start of the next thing not caring about tree siblings.  But maybe most of the places where I want to disrespect trees are for specific kinds of nodes.  Eg. I want a convenient “go to next/prev function definition”, but I rarely want “go to next expression disregarding tree shape”, or “go to next argument” that goes out to some other function call.
@@ -858,6 +858,29 @@ at the beginning (no change)."
           (move email ((direction backward) (location-within end))
                 (rmo/cpo-backward-email-end (num)))
 
+          ;; cpo-file-path-object -- bare (no prefix required) variant; alternate uses explicit (prefixed) variant
+          (move cpo-file-path-object ((direction expand-region) (alternate ,nil))
+                (,(lambda (location-within) (cpo-expand-region-to-cpo-file-path-object :position location-within)) (location-within)))
+          (move cpo-file-path-object ((direction forward) (location-within beginning) (alternate ,nil))
+                (rmo/cpo-forward-cpo-file-path-object-beginning (num)))
+          (move cpo-file-path-object ((direction backward) (location-within beginning) (alternate ,nil))
+                (rmo/cpo-backward-cpo-file-path-object-beginning (num)))
+          (move cpo-file-path-object ((direction forward) (location-within end) (alternate ,nil))
+                (rmo/cpo-forward-cpo-file-path-object-end (num)))
+          (move cpo-file-path-object ((direction backward) (location-within end) (alternate ,nil))
+                (rmo/cpo-backward-cpo-file-path-object-end (num)))
+          ;; alternate modifier selects cpo-file-path-object-explicit (paths starting with /, ./, or ../)
+          (move cpo-file-path-object ((direction expand-region) (alternate alternate))
+                (,(lambda (location-within) (cpo-expand-region-to-cpo-file-path-object-explicit :position location-within)) (location-within)))
+          (move cpo-file-path-object ((direction forward) (location-within beginning) (alternate alternate))
+                (rmo/cpo-forward-cpo-file-path-object-explicit-beginning (num)))
+          (move cpo-file-path-object ((direction backward) (location-within beginning) (alternate alternate))
+                (rmo/cpo-backward-cpo-file-path-object-explicit-beginning (num)))
+          (move cpo-file-path-object ((direction forward) (location-within end) (alternate alternate))
+                (rmo/cpo-forward-cpo-file-path-object-explicit-end (num)))
+          (move cpo-file-path-object ((direction backward) (location-within end) (alternate alternate))
+                (rmo/cpo-backward-cpo-file-path-object-explicit-end (num)))
+
           ;; Chronological date movement - alternate-2 modifier moves by chronological order instead of buffer order
           (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate ,nil) (alternate-2 alternate-2))
                 (rmo/cpo-forward-date-beginning-chronological (num)))
@@ -1296,7 +1319,7 @@ at the beginning (no change)."
           (action cpo-treesitter-qd () (,(lambda () (call-interactively 'lsp-execute-code-action)) ()))
           ;; TODO - this should be generalized to looking up docs for any language based on the current buffer.
           (action symbol () (,(lambda () (describe-symbol (symbol-at-point))) ()))
-          (action file-name () (ffap ()))
+          (action cpo-file-path-object () (ffap ()))
           (action vcs-change ((alternate ,nil)) (magit-stage ()))
           (action vcs-change ((alternate alternate)) (,(lambda () (call-interactively 'cpo-git-gutter-set-merge-base-revision)) ()))
           ;; TODO - what other actions?  Maybe word could open a dictionary / thesauarus.  Smartparens could maybe be eval-last-sexp, except that I would want it to be eval-sp-sexp-at-point, and I haven't written that.
