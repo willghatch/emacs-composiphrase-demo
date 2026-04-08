@@ -632,6 +632,14 @@ The command also executes the sentence, with region as the object, if the region
          (funcall (cp/ae (progn (require 'cpo-comma-list) (cp/obj 'cpo-comma-list))) n))
    "comma-list" :exit t)
 
+  ;; Buffer management objects (switching between buffers, not selecting text).
+  ("hB" (lambda (n) (interactive "p")
+          (funcall (cp/ae (cp/obj 'buffer-nav)) n))
+   "buffer-nav" :exit t)
+  ("hF" (lambda (n) (interactive "p")
+          (funcall (cp/ae (cp/obj 'file-nav)) n))
+   "file-nav" :exit t)
+
 
   ;; Specific delimiters, use smartparens for them.
 

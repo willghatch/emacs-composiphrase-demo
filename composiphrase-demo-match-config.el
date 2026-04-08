@@ -10,6 +10,9 @@
 ;; Must require this for the hack advice for visual modifier to decide what commands are sentence building.
 (require 'estate-visual-modifier-composiphrase-integration)
 
+;; Buffer management helpers for buffer-nav and file-nav objects.
+(require 'cpo-buffer-management)
+
 (defun composiphrase--make-movement-delegated-command (f-on-region &optional pass-sentence)
   "F-ON-REGION must take two args, region start and region end."
   (lambda (sentence-with-defaults)
@@ -152,6 +155,13 @@ at the beginning (no change)."
           (tracking-number)
           (date-yyyy-mm-dd (default-verb . move) (location-within . beginning))
           (cpo-comma-list (default-verb . move) (location-within . beginning))
+
+          ;; Buffer management objects -- these are about switching between buffers,
+          ;; not about selecting text within a buffer (that's what `buffer' does).
+          ;; buffer-nav is for all buffers, file-nav is for file-backed buffers only.
+          (buffer-nav (default-verb . move) (alternate . ,nil))
+          (file-nav (default-verb . move) (alternate . ,nil))
+
           ;; TODO - I want modifiers for respecting or not respecting tree bounds.  Eg. I typically want go-to-sibling for tree things that don't go out to cousin nodes.  But sometimes it is convenient to just go to the start of the next thing not caring about tree siblings.  But maybe most of the places where I want to disrespect trees are for specific kinds of nodes.  Eg. I want a convenient “go to next/prev function definition”, but I rarely want “go to next expression disregarding tree shape”, or “go to next argument” that goes out to some other function call.
           ;; TODO - I want some modifier to go to a tree node with a given tag.  Eg. this could be a lisp form that starts with a particular symbol, or a specific xml tag, or a treesitter node of particular type.  For org-mode or cpo-indent-tree it could be a particular indentation depth or something that I can match about the header or line.
           ))
@@ -1179,9 +1189,11 @@ at the beginning (no change)."
           ;; TODO - cpo-smartparens - make a join-sexp function that takes a forward or backward argument
 
 
+          ;; Buffer management delete: must be before the generic delete matcher.
+          (delete buffer-nav () (,(lambda () (kill-buffer (current-buffer))) ()))
+          (delete file-nav () (,(lambda () (kill-buffer (current-buffer))) ()))
 
           ;; TODO - optional register for delete to be delete-copy
-          ;; TODO - deduplicate these operations that delegate to the move command...
           (delete region
                   ()
                   (cpo-delete (register)))
@@ -1191,6 +1203,8 @@ at the beginning (no change)."
           (delete cpo-table-column
                   (inner ,nil)
                   (cpo-table-column-delete ()))
+
+          ;; TODO - deduplicate these operations that delegate to the move command...
           (delete ,(lambda (x) (not (memq x '(region))))
                   ()
                   (,(composiphrase--make-movement-delegated-command
@@ -1211,6 +1225,35 @@ at the beginning (no change)."
                                    (cons beg end)))
                      'pass-sentence)
                    sentence-with-defaults))
+
+          ;; Copy special handling for file-nav and buffer-nav:
+          ;; copy with expand-region copies the file/buffer name instead of text.
+          ;; These must be before the generic copy matcher to take priority.
+          (copy file-nav
+                ((direction expand-region) (alternate ,nil))
+                (,(lambda ()
+                    (let ((name (buffer-file-name)))
+                      (if name
+                          (progn (kill-new name) (message "Copied absolute file name: %s" name))
+                        (message "Buffer has no file name"))))
+                 ()))
+          (copy file-nav
+                ((direction expand-region) (alternate alternate))
+                (,(lambda ()
+                    (let ((name (buffer-file-name)))
+                      (if name
+                          (let ((basename (file-name-nondirectory name)))
+                            (kill-new basename)
+                            (message "Copied file basename: %s" basename))
+                        (message "Buffer has no file name"))))
+                 ()))
+          (copy buffer-nav
+                ((direction expand-region))
+                (,(lambda ()
+                    (let ((name (buffer-name)))
+                      (kill-new name)
+                      (message "Copied buffer name: %s" name)))
+                 ()))
 
           (copy region ()
                 (cpo-copy (register)))
@@ -1487,6 +1530,89 @@ at the beginning (no change)."
 
           (open date-yyyy-mm-dd ((alternate ,nil) (alternate-2 ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d"))) ()))
           (open date-yyyy-mm-dd ((alternate alternate) (alternate-2 ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d %H:%M:%S"))) ()))
+
+          ;; ============================================================
+          ;; Buffer management objects: buffer-nav and file-nav
+          ;; buffer-nav covers all buffers, file-nav covers file-backed buffers only.
+          ;; ============================================================
+
+          ;; --- buffer-nav: move ---
+          ;; Forward/backward cycle through buffers, skipping *-prefixed by default.
+          (move buffer-nav
+                ((direction forward) (alternate ,nil))
+                (rmo/cpo-next-buffer-no-star (num)))
+          (move buffer-nav
+                ((direction backward) (alternate ,nil))
+                (rmo/cpo-prev-buffer-no-star (num)))
+          ;; Alternate: include all buffers
+          (move buffer-nav
+                ((direction forward) (alternate alternate))
+                (rmo/next-buffer (num)))
+          (move buffer-nav
+                ((direction backward) (alternate alternate))
+                (rmo/previous-buffer (num)))
+          ;; Alternate-2: only modified buffers
+          (move buffer-nav
+                ((direction forward) (alternate-2 alternate-2))
+                (rmo/cpo-next-modified-buffer (num)))
+          (move buffer-nav
+                ((direction backward) (alternate-2 alternate-2))
+                (rmo/cpo-prev-modified-buffer (num)))
+
+          ;; --- file-nav: move ---
+          ;; Forward/backward cycle through file-backed buffers only.
+          (move file-nav
+                ((direction forward) (alternate ,nil))
+                (rmo/cpo-next-file-buffer (num)))
+          (move file-nav
+                ((direction backward) (alternate ,nil))
+                (rmo/cpo-prev-file-buffer (num)))
+          ;; Alternate: only modified file buffers
+          (move file-nav
+                ((direction forward) (alternate alternate))
+                (rmo/cpo-next-modified-file-buffer (num)))
+          (move file-nav
+                ((direction backward) (alternate alternate))
+                (rmo/cpo-prev-modified-file-buffer (num)))
+          ;; Expand-region direction is a buffer switch prompt for file-nav.
+          (move file-nav
+                ((direction expand-region))
+                (,(lambda () (call-interactively 'switch-to-buffer)) ()))
+
+          ;; --- buffer-nav: open ---
+          ;; Open a new buffer that is not file-backed (a scratch buffer).
+          (open buffer-nav
+                ()
+                (,(lambda ()
+                    (switch-to-buffer
+                     (generate-new-buffer "*scratch*")))
+                 ()))
+
+          ;; --- file-nav: open ---
+          ;; Open does find-file for file objects.
+          (open file-nav
+                ()
+                (,(lambda () (call-interactively 'find-file))
+                 ()))
+
+          ;; --- file-nav: action ---
+          ;; Action for file: save.  Verb-alternate: save-as (write-file).
+          (action file-nav
+                  ((verb-alternate ,nil))
+                  (,(lambda () (save-buffer)) ()))
+          (action file-nav
+                  ((verb-alternate verb-alternate))
+                  (,(lambda () (call-interactively 'write-file)) ()))
+
+          ;; --- buffer-nav: action ---
+          ;; Action for buffer: save-as (write-file) in both cases, since a buffer
+          ;; that is not file-backed has no natural save target.
+          (action buffer-nav
+                  ((verb-alternate ,nil))
+                  (,(lambda () (call-interactively 'write-file)) ()))
+          (action buffer-nav
+                  ((verb-alternate verb-alternate))
+                  (,(lambda () (call-interactively 'write-file)) ()))
 
           ;; Action verb matchers
           (action url () (browse-url-at-point ()))
