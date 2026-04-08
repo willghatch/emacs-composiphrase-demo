@@ -3,6 +3,7 @@
 ;; TODO - are there things in this demo file that break if other things aren't required yet?
 
 (require 'composiphrase)
+(require 'cl-lib)
 
 ;; For aggreact-make-explicit-command for transposition commands.
 (require 'aggreact)
@@ -42,6 +43,18 @@ Any other value (nil, \\='beginning, or anything else) leaves point
 at the beginning (no change)."
   (when (and (eq location-within 'end) (region-active-p))
     (exchange-point-and-mark)))
+
+(defun composiphrase-demo--object-alternate-transformer (object)
+  "Return a sentence pre-transformer that replaces the sentence object with OBJECT.
+The consumed `alternate' modifier is removed so the pre-transformer cannot
+re-match the rewritten sentence."
+  (lambda (sentence _params)
+    (cons `((word-type . object) (contents . ,object))
+          (cl-remove-if
+           (lambda (word)
+             (or (composiphrase-object-p word)
+                 (composiphrase-modifier-p word :parameter-name 'alternate)))
+           sentence))))
 
 (setq composiphrase-demo-match-config
       `((verbs
@@ -165,6 +178,18 @@ at the beginning (no change)."
           ;; TODO - I want modifiers for respecting or not respecting tree bounds.  Eg. I typically want go-to-sibling for tree things that don't go out to cousin nodes.  But sometimes it is convenient to just go to the start of the next thing not caring about tree siblings.  But maybe most of the places where I want to disrespect trees are for specific kinds of nodes.  Eg. I want a convenient “go to next/prev function definition”, but I rarely want “go to next expression disregarding tree shape”, or “go to next argument” that goes out to some other function call.
           ;; TODO - I want some modifier to go to a tree node with a given tag.  Eg. this could be a lisp form that starts with a particular symbol, or a specific xml tag, or a treesitter node of particular type.  For org-mode or cpo-indent-tree it could be a particular indentation depth or something that I can match about the header or line.
           ))
+        (sentence-pre-transformers
+         .
+         (((_ word ((alternate 1))
+             ,(composiphrase-demo--object-alternate-transformer 'cpo-vi-like-word))
+            (_ word ((alternate 2))
+             ,(composiphrase-demo--object-alternate-transformer 'cpo-camel-case-sub-word))
+            (_ cpo-table ((alternate 1))
+             ,(composiphrase-demo--object-alternate-transformer 'cpo-table-cell))
+            (_ cpo-table ((alternate 2))
+             ,(composiphrase-demo--object-alternate-transformer 'cpo-table-column))
+            (_ cpo-table ((alternate 3))
+             ,(composiphrase-demo--object-alternate-transformer 'cpo-table-row)))))
         (match-table
          .
          (
@@ -205,52 +230,52 @@ at the beginning (no change)."
                 ((direction forward) (alternate ,nil))
                 (rmo/cpo-location-history-global-forward (num)))
           (move location-history
-                ((direction backward) (alternate alternate))
+                ((direction backward) (alternate 1))
                 (rmo/cpo-location-history-local-back (num)))
           (move location-history
-                ((direction forward) (alternate alternate))
+                ((direction forward) (alternate 1))
                 (rmo/cpo-location-history-local-forward (num)))
           (move location-history
-                ((direction backward) (alternate-2 alternate-2))
+                ((direction backward) (alternate 10))
                 (rmo/cpo-location-history-non-local-back (num)))
           (move location-history
-                ((direction forward) (alternate-2 alternate-2))
+                ((direction forward) (alternate 10))
                 (rmo/cpo-location-history-non-local-forward (num)))
 
           (move vcs-change
                 ((direction expand-region))
                 (,(lambda (location-within) (cpo-git-gutter-hunk-expand-region :position location-within)) (location-within)))
           (move vcs-change
-                ((direction forward) (location-within beginning) (alternate ,nil) (alternate-2 ,nil))
+                ((direction forward) (location-within beginning) (alternate ,nil))
                 (rmo/cpo-git-gutter-hunk-forward-beginning (num)))
           (move vcs-change
-                ((direction backward) (location-within beginning) (alternate ,nil) (alternate-2 ,nil))
+                ((direction backward) (location-within beginning) (alternate ,nil))
                 (rmo/cpo-git-gutter-hunk-backward-beginning (num)))
           (move vcs-change
-                ((direction forward) (location-within end) (alternate ,nil) (alternate-2 ,nil))
+                ((direction forward) (location-within end) (alternate ,nil))
                 (rmo/cpo-git-gutter-hunk-forward-end (num)))
           (move vcs-change
-                ((direction backward) (location-within end) (alternate ,nil) (alternate-2 ,nil))
+                ((direction backward) (location-within end) (alternate ,nil))
                 (rmo/cpo-git-gutter-hunk-backward-end (num)))
           ;; Alternate: hunk navigation with cross-file fallback
           (move vcs-change
-                ((direction forward) (location-within beginning) (alternate alternate) (alternate-2 ,nil))
+                ((direction forward) (location-within beginning) (alternate 1))
                 (,(lambda (count) (cpo-git-gutter-hunk-forward-beginning :count (or count 1) :cross-files t)) (num)))
           (move vcs-change
-                ((direction backward) (location-within beginning) (alternate alternate) (alternate-2 ,nil))
+                ((direction backward) (location-within beginning) (alternate 1))
                 (,(lambda (count) (cpo-git-gutter-hunk-backward-beginning :count (or count 1) :cross-files t)) (num)))
           (move vcs-change
-                ((direction forward) (location-within end) (alternate alternate) (alternate-2 ,nil))
+                ((direction forward) (location-within end) (alternate 1))
                 (,(lambda (count) (cpo-git-gutter-hunk-forward-end :count (or count 1) :cross-files t)) (num)))
           (move vcs-change
-                ((direction backward) (location-within end) (alternate alternate) (alternate-2 ,nil))
+                ((direction backward) (location-within end) (alternate 1))
                 (,(lambda (count) (cpo-git-gutter-hunk-backward-end :count (or count 1) :cross-files t)) (num)))
-          ;; Alternate-2: jump directly to next/previous changed file
+          ;; Alternate+10: jump directly to next/previous changed file
           (move vcs-change
-                ((direction forward) (alternate-2 alternate-2))
+                ((direction forward) (alternate 10))
                 (rmo/cpo-git-gutter-hunk-forward-file (num)))
           (move vcs-change
-                ((direction backward) (alternate-2 alternate-2))
+                ((direction backward) (alternate 10))
                 (rmo/cpo-git-gutter-hunk-backward-file (num)))
 
           (move buffer
@@ -273,7 +298,7 @@ at the beginning (no change)."
           ;; TODO - expand region to specific char inner/outer -- good for ad-hoc regions delimited by the same character, can be used for '' strings and "" strings that don't have escapes, for $$ regions in latex, etc.
           ;; TODO - absolute movement for character -- I've implemented it as column, with alternate absolute movement as absolute position in buffer, (and with absolute buffer position as numeric movement for buffer...) but maybe should swap... I think column is more useful and frequent to have be more convenient...
           (move character
-                ((absolute absolute) (alternate alternate))
+                ((absolute absolute) (alternate 1))
                 (goto-char (num)))
           (move character
                 ((absolute absolute))
@@ -477,10 +502,10 @@ at the beginning (no change)."
                 (,(lambda (location-within) (cpo-expand-region-to-fill-lines t :position location-within)) (location-within)))
           ;; TODO - alternate for back-to-indentation?  I don't love it, but I want this somewhere.
           (move line
-                ((direction backward) (alternate alternate))
+                ((direction backward) (alternate 1))
                 (back-to-indentation ()))
           (move line
-                ((direction forward) (alternate alternate))
+                ((direction forward) (alternate 1))
                 (TODO-forward-until-trailing-white-space ()))
           (move line
                 ((direction forward) (location-within beginning))
@@ -580,10 +605,10 @@ at the beginning (no change)."
                 ((direction backward) (tree-vertical up) (inner inner))
                 (rmo/sp-beginning-of-sexp (num)))
           (slurp cpo-smartparens
-                 ((direction forward) (verb-alternate verb-alternate))
+                 ((direction forward) (verb-alternate 1))
                  (cpo-smartparens-forward-slurp-all ()))
           (slurp cpo-smartparens
-                 ((direction backward) (verb-alternate verb-alternate))
+                 ((direction backward) (verb-alternate 1))
                  (cpo-smartparens-backward-slurp-all ()))
           (slurp cpo-smartparens
                  ((direction forward) (verb-alternate ,nil))
@@ -727,8 +752,8 @@ at the beginning (no change)."
                 (rmo/cpo-outline-down-to-last-child (num)))
           ;; (promote outline () (,(lambda () (outline-promote 'subtree)) ()))
           ;; (demote outline () (,(lambda () (outline-demote 'subtree)) ()))
-          (promote outline ((alternate alternate)) (,(lambda () (require 'org) (org-promote)) ()))
-          (demote outline ((alternate alternate)) (,(lambda () (require 'org) (org-demote)) ()))
+          (promote outline ((alternate 1)) (,(lambda () (require 'org) (org-promote)) ()))
+          (demote outline ((alternate 1)) (,(lambda () (require 'org) (org-demote)) ()))
           (promote outline () (,(lambda () (require 'org) (org-promote-subtree)) ()))
           (demote outline () (,(lambda () (require 'org) (org-demote-subtree)) ()))
           ;; TODO - commented out because they are broken
@@ -741,16 +766,16 @@ at the beginning (no change)."
 
           ;; cpo-outline-heading -- heading line object (not tree-shaped like outline)
           (move cpo-outline-heading
-                ((direction expand-region) (inner ,nil) (alternate ,nil) (alternate-2 ,nil))
+                ((direction expand-region) (inner ,nil) (alternate ,nil))
                 (,(lambda (location-within) (cpo-outline-heading-select) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-outline-heading
-                ((direction expand-region) (inner inner) (alternate ,nil) (alternate-2 ,nil))
+                ((direction expand-region) (inner inner) (alternate ,nil))
                 (,(lambda (location-within) (cpo-outline-heading-select-inner) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-outline-heading
-                ((direction expand-region) (alternate alternate) (alternate-2 ,nil))
+                ((direction expand-region) (alternate 1))
                 (,(lambda (location-within) (cpo-outline-heading-select-body) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-outline-heading
-                ((direction expand-region) (alternate ,nil) (alternate-2 alternate-2))
+                ((direction expand-region) (alternate 10))
                 (,(lambda (location-within) (cpo-outline-heading-select-prefix) (composiphrase-demo--set-expand-region-position location-within)) (location-within)))
           (move cpo-outline-heading
                 ((direction forward) (location-within beginning))
@@ -804,7 +829,7 @@ at the beginning (no change)."
                 ((direction expand-region) (alternate ,nil))
                 (,(lambda (location-within) (cpo-org-structure-block-expand-region :position location-within)) (location-within)))
           (move org-structure-block
-                ((direction expand-region) (alternate alternate))
+                ((direction expand-region) (alternate 1))
                 (,(lambda (location-within) (cpo-org-structure-block-expand-region-inner :position location-within)) (location-within)))
           (move org-structure-block
                 ((direction forward) (location-within beginning))
@@ -865,10 +890,10 @@ at the beginning (no change)."
                 ((tree-vertical down) (direction forward))
                 (rmo/cpo-indent-tree-down-to-last-child (num)))
           (slurp cpo-indent-tree
-                 ((direction forward) (verb-alternate verb-alternate))
+                 ((direction forward) (verb-alternate 1))
                  (cpo-indent-tree-slurp-all-forward ()))
           (slurp cpo-indent-tree
-                 ((direction backward) (verb-alternate verb-alternate))
+                 ((direction backward) (verb-alternate 1))
                  (cpo-indent-tree-slurp-all-backward ()))
           (slurp cpo-indent-tree
                  ((direction forward) (verb-alternate ,nil))
@@ -917,58 +942,58 @@ at the beginning (no change)."
           (move cpo-file-path-object ((direction backward) (location-within end) (alternate ,nil))
                 (rmo/cpo-backward-cpo-file-path-object-end (num)))
           ;; alternate modifier selects cpo-file-path-object-explicit (paths starting with /, ./, or ../)
-          (move cpo-file-path-object ((direction expand-region) (alternate alternate))
+          (move cpo-file-path-object ((direction expand-region) (alternate 1))
                 (,(lambda (location-within) (cpo-expand-region-to-cpo-file-path-object-explicit :position location-within)) (location-within)))
-          (move cpo-file-path-object ((direction forward) (location-within beginning) (alternate alternate))
+          (move cpo-file-path-object ((direction forward) (location-within beginning) (alternate 1))
                 (rmo/cpo-forward-cpo-file-path-object-explicit-beginning (num)))
-          (move cpo-file-path-object ((direction backward) (location-within beginning) (alternate alternate))
+          (move cpo-file-path-object ((direction backward) (location-within beginning) (alternate 1))
                 (rmo/cpo-backward-cpo-file-path-object-explicit-beginning (num)))
-          (move cpo-file-path-object ((direction forward) (location-within end) (alternate alternate))
+          (move cpo-file-path-object ((direction forward) (location-within end) (alternate 1))
                 (rmo/cpo-forward-cpo-file-path-object-explicit-end (num)))
-          (move cpo-file-path-object ((direction backward) (location-within end) (alternate alternate))
+          (move cpo-file-path-object ((direction backward) (location-within end) (alternate 1))
                 (rmo/cpo-backward-cpo-file-path-object-explicit-end (num)))
 
-          ;; Chronological date movement - alternate-2 modifier moves by chronological order instead of buffer order
-          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate ,nil) (alternate-2 alternate-2))
+          ;; Alternate+10 date movement moves by chronological order instead of buffer order
+          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate 10))
                 (rmo/cpo-forward-date-beginning-chronological (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate ,nil) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate 10))
                 (rmo/cpo-backward-date-beginning-chronological (num)))
-          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate ,nil) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate 10))
                 (rmo/cpo-forward-date-end-chronological (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate ,nil) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate 10))
                 (rmo/cpo-backward-date-end-chronological (num)))
 
           ;; Chronological datetime movement
-          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate alternate) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate 11))
                 (rmo/cpo-forward-datetime-beginning-chronological (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate alternate) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate 11))
                 (rmo/cpo-backward-datetime-beginning-chronological (num)))
-          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate alternate) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate 11))
                 (rmo/cpo-forward-datetime-end-chronological (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate alternate) (alternate-2 alternate-2))
+          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate 11))
                 (rmo/cpo-backward-datetime-end-chronological (num)))
 
-          (move date-yyyy-mm-dd ((direction expand-region) (alternate ,nil) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction expand-region) (alternate ,nil))
                 (,(lambda (location-within) (cpo-expand-region-to-cpo-date :position location-within)) (location-within)))
-          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate ,nil) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate ,nil))
                 (rmo/cpo-forward-date-beginning (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate ,nil) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate ,nil))
                 (rmo/cpo-backward-date-beginning (num)))
-          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate ,nil) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate ,nil))
                 (rmo/cpo-forward-date-end (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate ,nil) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate ,nil))
                 (rmo/cpo-backward-date-end (num)))
 
           ;; Date-time configurations - use alternate modifier to select datetime instead of date
-          (move date-yyyy-mm-dd ((direction expand-region) (alternate alternate) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction expand-region) (alternate 1))
                 (,(lambda (location-within) (cpo-expand-region-to-cpo-datetime :position location-within)) (location-within)))
-          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate alternate) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction forward) (location-within beginning) (alternate 1))
                 (rmo/cpo-forward-datetime-beginning (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate alternate) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction backward) (location-within beginning) (alternate 1))
                 (rmo/cpo-backward-datetime-beginning (num)))
-          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate alternate) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction forward) (location-within end) (alternate 1))
                 (rmo/cpo-forward-datetime-end (num)))
-          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate alternate) (alternate-2 ,nil))
+          (move date-yyyy-mm-dd ((direction backward) (location-within end) (alternate 1))
                 (rmo/cpo-backward-datetime-end (num)))
 
           (move cpo-comma-list ((direction expand-region))
@@ -987,7 +1012,7 @@ at the beginning (no change)."
                 ((direction expand-region) (alternate ,nil))
                 (,(lambda (location-within) (cpo-table-expand-region :position location-within)) (location-within)))
           (move cpo-table
-                ((direction expand-region) (alternate alternate))
+                ((direction expand-region) (alternate 10))
                 (,(lambda (location-within) (cpo-table-expand-region-through-hierarchy :position location-within)) (location-within)))
           (move cpo-table
                 ((direction forward) (location-within beginning))
@@ -1035,10 +1060,10 @@ at the beginning (no change)."
                 ((tree-vertical down) (location-within end))
                 (,(lambda (num) (cpo-table-cell-down num :position 'end)) (num)))
           (move cpo-table-cell
-                ((alternate alternate) (location-within beginning))
+                ((alternate 1) (location-within beginning))
                 (cpo-table-cell-beginning-of-content ()))
           (move cpo-table-cell
-                ((alternate alternate) (location-within end))
+                ((alternate 1) (location-within end))
                 (cpo-table-cell-end-of-content ()))
 
           ;; cpo-table-row -- table row object
@@ -1102,22 +1127,22 @@ at the beginning (no change)."
           (transpose url ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-url-backward) (num)))
           (transpose email ((direction forward)) (,(aggreact-make-explicit-command 'cpo-transpose-email-forward) (num)))
           (transpose email ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-email-backward) (num)))
-          ;; Chronological date transpose - alternate-2 modifier transposes by chronological order
-          (transpose date-yyyy-mm-dd ((direction forward) (alternate ,nil) (alternate-2 alternate-2)) (,(aggreact-make-explicit-command 'cpo-transpose-date-forward-chronological) (num)))
-          (transpose date-yyyy-mm-dd ((direction backward) (alternate ,nil) (alternate-2 alternate-2)) (,(aggreact-make-explicit-command 'cpo-transpose-date-backward-chronological) (num)))
-          (transpose date-yyyy-mm-dd ((direction forward) (alternate alternate) (alternate-2 alternate-2)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-forward-chronological) (num)))
-          (transpose date-yyyy-mm-dd ((direction backward) (alternate alternate) (alternate-2 alternate-2)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-backward-chronological) (num)))
+          ;; Alternate+10 date transpose moves by chronological order
+          (transpose date-yyyy-mm-dd ((direction forward) (alternate 10)) (,(aggreact-make-explicit-command 'cpo-transpose-date-forward-chronological) (num)))
+          (transpose date-yyyy-mm-dd ((direction backward) (alternate 10)) (,(aggreact-make-explicit-command 'cpo-transpose-date-backward-chronological) (num)))
+          (transpose date-yyyy-mm-dd ((direction forward) (alternate 11)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-forward-chronological) (num)))
+          (transpose date-yyyy-mm-dd ((direction backward) (alternate 11)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-backward-chronological) (num)))
 
-          (transpose date-yyyy-mm-dd ((direction forward) (alternate ,nil) (alternate-2 ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-forward) (num)))
-          (transpose date-yyyy-mm-dd ((direction backward) (alternate ,nil) (alternate-2 ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-backward) (num)))
-          (transpose date-yyyy-mm-dd ((direction forward) (alternate alternate) (alternate-2 ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-forward) (num)))
-          (transpose date-yyyy-mm-dd ((direction backward) (alternate alternate) (alternate-2 ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-backward) (num)))
+          (transpose date-yyyy-mm-dd ((direction forward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-forward) (num)))
+          (transpose date-yyyy-mm-dd ((direction backward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-date-backward) (num)))
+          (transpose date-yyyy-mm-dd ((direction forward) (alternate 1)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-forward) (num)))
+          (transpose date-yyyy-mm-dd ((direction backward) (alternate 1)) (,(aggreact-make-explicit-command 'cpo-transpose-datetime-backward) (num)))
           (transpose cpo-comma-list ((direction forward)) (,(aggreact-make-explicit-command 'cpo-comma-list-transpose-forward) (num)))
           (transpose cpo-comma-list ((direction backward)) (,(aggreact-make-explicit-command 'cpo-comma-list-transpose-backward) (num)))
           (transpose cpo-file-path-object ((direction forward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-forward) (num)))
           (transpose cpo-file-path-object ((direction backward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-backward) (num)))
-          (transpose cpo-file-path-object ((direction forward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-explicit-forward) (num)))
-          (transpose cpo-file-path-object ((direction backward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-explicit-backward) (num)))
+          (transpose cpo-file-path-object ((direction forward) (alternate 1)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-explicit-forward) (num)))
+          (transpose cpo-file-path-object ((direction backward) (alternate 1)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-explicit-backward) (num)))
           (transpose cpo-markdown-list ((direction forward)) (,(aggreact-make-explicit-command 'cpo-markdown-list-transpose-sibling-forward) (num)))
           (transpose cpo-markdown-list ((direction backward)) (,(aggreact-make-explicit-command 'cpo-markdown-list-transpose-sibling-backward) (num)))
           (transpose cpo-table ((direction forward)) (,(aggreact-make-explicit-command 'cpo-table-transpose-forward) (num)))
@@ -1238,7 +1263,7 @@ at the beginning (no change)."
                         (message "Buffer has no file name"))))
                  ()))
           (copy file-nav
-                ((direction expand-region) (alternate alternate))
+                ((direction expand-region) (alternate 1))
                 (,(lambda ()
                     (let ((name (buffer-file-name)))
                       (if name
@@ -1438,19 +1463,19 @@ at the beginning (no change)."
           ;; current position, creating a "moving highlight" effect.
           (activate-visual-modifier-state
            line
-           ((verb-alternate verb-alternate) (inner ,nil))
+           ((verb-alternate 1) (inner ,nil))
            (,(cpd-visual-clamped-modifier-activator 'line) ()))
           (activate-visual-modifier-state
            line
-           ((verb-alternate verb-alternate) (inner inner))
+           ((verb-alternate 1) (inner inner))
            (,(cpd-visual-clamped-modifier-activator 'cpo-line-no-newline) ()))
           (activate-visual-modifier-state
            word
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'word) ()))
           (activate-visual-modifier-state
            cpo-smartparens
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-tree-activator
               'cpo-smartparens
               'cpo-smartparens--bounds-of-sexp-at-point
@@ -1458,7 +1483,7 @@ at the beginning (no change)."
             ()))
           (activate-visual-modifier-state
            cpo-indent-tree
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-tree-activator
               'cpo-indent-tree
               'cpo-indent-tree-bounds
@@ -1466,7 +1491,7 @@ at the beginning (no change)."
             ()))
           (activate-visual-modifier-state
            outline
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-tree-activator
               'outline
               'cpo-outline-tree-bounds
@@ -1474,7 +1499,7 @@ at the beginning (no change)."
             ()))
           (activate-visual-modifier-state
            cpo-treesitter-qd
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-tree-activator
               'cpo-treesitter-qd
               'cpo-treesitter-qd-bounds-of-thing-at-point
@@ -1482,43 +1507,43 @@ at the beginning (no change)."
             ()))
           (activate-visual-modifier-state
            cpo-vi-like-word
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'cpo-vi-like-word) ()))
           (activate-visual-modifier-state
            symbol
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'symbol) ()))
           (activate-visual-modifier-state
            sexp
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'sexp) ()))
           (activate-visual-modifier-state
            list
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'list) ()))
           (activate-visual-modifier-state
            sentence
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'sentence) ()))
           (activate-visual-modifier-state
            paragraph
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'paragraph) ()))
           (activate-visual-modifier-state
            url
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'url 'cpo-url-object) ()))
           (activate-visual-modifier-state
            email
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'email 'cpo-url-object) ()))
           (activate-visual-modifier-state
            date-yyyy-mm-dd
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'cpo-date 'cpo-date-object) ()))
           (activate-visual-modifier-state
            cpo-comma-list
-           ((verb-alternate verb-alternate))
+           ((verb-alternate 1))
            (,(cpd-visual-clamped-modifier-activator 'cpo-comma-list 'cpo-comma-list) ()))
 
 
@@ -1528,8 +1553,8 @@ at the beginning (no change)."
           ;;                   (,(composiphrase--make-movement-delegated-command 'cpo-isearch-forward-for-text-in-region)
           ;;                    sentence-with-defaults))
 
-          (open date-yyyy-mm-dd ((alternate ,nil) (alternate-2 ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d"))) ()))
-          (open date-yyyy-mm-dd ((alternate alternate) (alternate-2 ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d %H:%M:%S"))) ()))
+          (open date-yyyy-mm-dd ((alternate ,nil)) (,(lambda () (insert (format-time-string "%Y-%m-%d"))) ()))
+          (open date-yyyy-mm-dd ((alternate 1)) (,(lambda () (insert (format-time-string "%Y-%m-%d %H:%M:%S"))) ()))
 
           ;; ============================================================
           ;; Buffer management objects: buffer-nav and file-nav
@@ -1546,17 +1571,17 @@ at the beginning (no change)."
                 (rmo/cpo-prev-buffer-no-star (num)))
           ;; Alternate: include all buffers
           (move buffer-nav
-                ((direction forward) (alternate alternate))
+                ((direction forward) (alternate 1))
                 (rmo/next-buffer (num)))
           (move buffer-nav
-                ((direction backward) (alternate alternate))
+                ((direction backward) (alternate 1))
                 (rmo/previous-buffer (num)))
-          ;; Alternate-2: only modified buffers
+          ;; Alternate+10: only modified buffers
           (move buffer-nav
-                ((direction forward) (alternate-2 alternate-2))
+                ((direction forward) (alternate 10))
                 (rmo/cpo-next-modified-buffer (num)))
           (move buffer-nav
-                ((direction backward) (alternate-2 alternate-2))
+                ((direction backward) (alternate 10))
                 (rmo/cpo-prev-modified-buffer (num)))
 
           ;; --- file-nav: move ---
@@ -1569,10 +1594,10 @@ at the beginning (no change)."
                 (rmo/cpo-prev-file-buffer (num)))
           ;; Alternate: only modified file buffers
           (move file-nav
-                ((direction forward) (alternate alternate))
+                ((direction forward) (alternate 1))
                 (rmo/cpo-next-modified-file-buffer (num)))
           (move file-nav
-                ((direction backward) (alternate alternate))
+                ((direction backward) (alternate 1))
                 (rmo/cpo-prev-modified-file-buffer (num)))
           ;; Expand-region direction is a buffer switch prompt for file-nav.
           (move file-nav
@@ -1601,7 +1626,7 @@ at the beginning (no change)."
                   ((verb-alternate ,nil))
                   (,(lambda () (save-buffer)) ()))
           (action file-nav
-                  ((verb-alternate verb-alternate))
+                  ((verb-alternate 1))
                   (,(lambda () (call-interactively 'write-file)) ()))
 
           ;; --- buffer-nav: action ---
@@ -1611,7 +1636,7 @@ at the beginning (no change)."
                   ((verb-alternate ,nil))
                   (,(lambda () (call-interactively 'write-file)) ()))
           (action buffer-nav
-                  ((verb-alternate verb-alternate))
+                  ((verb-alternate 1))
                   (,(lambda () (call-interactively 'write-file)) ()))
 
           ;; Action verb matchers
@@ -1623,7 +1648,7 @@ at the beginning (no change)."
           (action symbol () (,(lambda () (describe-symbol (symbol-at-point))) ()))
           (action cpo-file-path-object () (ffap ()))
           (action vcs-change ((alternate ,nil)) (magit-stage ()))
-          (action vcs-change ((alternate alternate)) (,(lambda () (call-interactively 'cpo-git-gutter-set-merge-base-revision)) ()))
+          (action vcs-change ((alternate 1)) (,(lambda () (call-interactively 'cpo-git-gutter-set-merge-base-revision)) ()))
           ;; TODO - what other actions?  Maybe word could open a dictionary / thesauarus.  Smartparens could maybe be eval-last-sexp, except that I would want it to be eval-sp-sexp-at-point, and I haven't written that.
 
           ))))

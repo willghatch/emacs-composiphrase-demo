@@ -57,6 +57,15 @@ UI-HINT is used for the ui-hint field if non-nil, else CONTENTS is also used as 
     (contents . ,contents)
     (ui-hint . ,(or ui-hint contents))))
 
+(defun cp/+-accumulator (existing new)
+  "Add numeric modifier values EXISTING and NEW."
+  (+ (or existing 0) new))
+
+(defun cp/mod+ (name contents)
+  "Construct an additive numeric modifier word for NAME with value CONTENTS. "
+  (append (cp/mod name contents)
+          `((accumulator . ,#'cp/+-accumulator))))
+
 (defun cp/add (&rest words)
   "Return a command that adds WORDS to current command sentence (and handles numeric argument, adding it to sentence).
 "
@@ -586,6 +595,12 @@ The command also executes the sentence, with region as the object, if the region
   ("L" (lambda (n) (interactive "p")
          (funcall (cp/ae (cp/obj 'list)) n))
    "list" :exit t)
+  ("m" (lambda (n) (interactive "p")
+         (funcall (cp/ae (progn (require 'cpo-markdown-list) (cp/obj 'cpo-markdown-list))) n))
+   "markdown-list" :exit t)
+  ("T" (lambda (n) (interactive "p")
+         (funcall (cp/ae (progn (require 'cpo-table) (cp/obj 'cpo-table))) n))
+   "table" :exit t)
   ("hL" (lambda (n) (interactive "p")
           (funcall (cp/ae (cp/obj 'linter-warning)) n))
    "linter-warning" :exit t)
@@ -742,7 +757,7 @@ The command also executes the sentence, with region as the object, if the region
   ("d" (lambda (n) (interactive "p")
          (funcall (cp/add (cp/mod 'tree-vertical 'down)) n))
    "down" :exit nil)
-  ("T" (lambda (n) (interactive "p")
+  ("R" (lambda (n) (interactive "p")
          (funcall (cp/add (cp/mod 'tree-traversal 'inorder)) n))
    "inorder" :exit nil)
   ("r" (lambda (n) (interactive "p")
@@ -759,17 +774,17 @@ The command also executes the sentence, with region as the object, if the region
          (funcall (cp/add (cp/mod 'matching 'matching)) n))
    "matching" :exit nil) ;; Eg. for finding the next matching word, symbol, whatever.
   ("a" (lambda (n) (interactive "p")
-         (funcall (cp/add (cp/mod 'alternate 'alternate)) n))
-   "alternate" :exit nil) ;; For object-specific alternate behavior...
+         (funcall (cp/add (cp/mod+ 'alternate 1)) n))
+   "alternate+1" :exit nil) ;; For object-specific alternate behavior...
   ("A" (lambda (n) (interactive "p")
-         (funcall (cp/add (cp/mod 'alternate-2 'alternate-2)) n))
-   "alternate-2" :exit nil)
+         (funcall (cp/add (cp/mod+ 'alternate 10)) n))
+   "alternate+10" :exit nil)
   ("v" (lambda (n) (interactive "p")
-         (funcall (cp/add (cp/mod 'verb-alternate 'verb-alternate)) n))
-   "verb-alt" :exit nil)
+         (funcall (cp/add (cp/mod+ 'verb-alternate 1)) n))
+   "verb-alt+1" :exit nil)
   ("V" (lambda (n) (interactive "p")
-         (funcall (cp/add (cp/mod 'verb-alternate-2 'verb-alternate-2)) n))
-   "verb-alt-2" :exit nil)
+         (funcall (cp/add (cp/mod+ 'verb-alternate 10)) n))
+   "verb-alt+10" :exit nil)
 
   ("hR" (lambda (n) (interactive "p")
           (funcall (cp/add (cp/mod 'respect-tree 'respect-tree)) n))

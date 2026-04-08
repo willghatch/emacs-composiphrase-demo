@@ -758,18 +758,14 @@ Makes movements move to the next thing that matches the current one.
 Eg. the next word that is the same as the word at point, or the next instance of the symbol at point, or the next line that is the same as point, or the next sexp that has identical contents (modulo white space, hopefully!), etc.
 † I haven't implemented this.
 
-### alternate: alternate
+### alternate
 
-Bound to `a` in object map.
-This is sort of a catch all, to provide alternate behaviors when there could be multiple.
+Bound to `a` in object map to add 1 to the numeric `alternate` modifier.
+Bound to `A` in object map to add 10 to the same numeric modifier.
+This is sort of a catch all, to provide alternate behaviors when there could be multiple.  The numeric value allows related alternate choices without needing separate modifier names.
 † I have only used this one rarely, so far, though there are various ways I've thought about using it but haven't implemented.
 Eg. switch between vi word and vi WORD, switch between symbol and symbol segment (splitting at underscores, dashes, camelCaseSubWords, or such).
 These differences are object (or maybe verb) specific, and thus are hard to capture in a modifier that is really re-usable, without lumping a bunch of unrelated concepts together.
-
-### alternate: alternate-2
-
-Bound to `A` in object map.
-Maybe there are multiple alternate ways of looking at things.
 
 ### respect-tree
 
