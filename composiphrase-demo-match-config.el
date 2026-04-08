@@ -109,6 +109,11 @@ at the beginning (no change)."
           (cpo-indent-tree (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
           (outline (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
           (cpo-outline-heading (default-verb . move) (location-within . beginning))
+          (cpo-markdown-list (default-verb . move) (location-within . beginning) (respect-tree . respect-tree))
+          (cpo-table (default-verb . move) (location-within . beginning))
+          (cpo-table-cell (default-verb . move) (location-within . beginning) (inner . ,nil))
+          (cpo-table-row (default-verb . move) (location-within . beginning) (inner . ,nil))
+          (cpo-table-column (default-verb . move) (location-within . beginning))
           (org-structure-block (default-verb . move) (location-within . beginning))
           (cpo-treesitter-qd (default-verb . move) (location-within . anchor) (respect-tree . respect-tree)) ;; IE treesitter generic handler
           ;; TODO - other tree-sitter things that are more tuned to the language.  Well, maybe it would be good to have the generic cpo-treesitter-qd and a more specific one on the same map, where the specific one pulls in some language config.  I think it's likely worthwhile to still keep a generic one in the map, though.
@@ -752,6 +757,38 @@ at the beginning (no change)."
           (promote cpo-outline-heading () (cpo-outline-heading-promote ()))
           (demote cpo-outline-heading () (cpo-outline-heading-demote ()))
 
+          ;; cpo-markdown-list -- markdown list item tree object
+          (move cpo-markdown-list
+                ((direction expand-region))
+                (,(lambda (num location-within) (cpo-markdown-list-expand-region num :position location-within)) (num location-within)))
+          (move cpo-markdown-list
+                ((direction forward) (location-within beginning) (tree-vertical ,nil))
+                (cpo-markdown-list-forward-beginning (num)))
+          (move cpo-markdown-list
+                ((direction backward) (location-within beginning) (tree-vertical ,nil))
+                (cpo-markdown-list-backward-beginning (num)))
+          (move cpo-markdown-list
+                ((direction forward) (location-within end) (tree-vertical ,nil))
+                (cpo-markdown-list-forward-end (num)))
+          (move cpo-markdown-list
+                ((direction backward) (location-within end) (tree-vertical ,nil))
+                (cpo-markdown-list-backward-end (num)))
+          (move cpo-markdown-list
+                ((tree-vertical up))
+                (cpo-markdown-list-up-to-parent (num)))
+          (move cpo-markdown-list
+                ((tree-vertical down))
+                (cpo-markdown-list-down-to-first-child (num)))
+          (slurp cpo-markdown-list
+                 ((direction forward))
+                 (cpo-markdown-list-forward-slurp ()))
+          (barf cpo-markdown-list
+                ((direction forward))
+                (cpo-markdown-list-forward-barf ()))
+          (action cpo-markdown-list
+                  ()
+                  (cpo-markdown-list-fix-numbering (num)))
+
           ;; org-structure-block -- org #+begin_/#+end_ blocks
           (move org-structure-block
                 ((direction expand-region) (alternate ,nil))
@@ -935,6 +972,105 @@ at the beginning (no change)."
           (move cpo-comma-list ((direction backward) (location-within end))
                 (rmo/cpo-comma-list-backward-end (num)))
 
+          ;; cpo-table -- whole markdown/org table object
+          (move cpo-table
+                ((direction expand-region) (alternate ,nil))
+                (,(lambda (location-within) (cpo-table-expand-region :position location-within)) (location-within)))
+          (move cpo-table
+                ((direction expand-region) (alternate alternate))
+                (,(lambda (location-within) (cpo-table-expand-region-through-hierarchy :position location-within)) (location-within)))
+          (move cpo-table
+                ((direction forward) (location-within beginning))
+                (rmo/cpo-table-forward-beginning (num)))
+          (move cpo-table
+                ((direction backward) (location-within beginning))
+                (rmo/cpo-table-backward-beginning (num)))
+          (move cpo-table
+                ((direction forward) (location-within end))
+                (rmo/cpo-table-forward-end (num)))
+          (move cpo-table
+                ((direction backward) (location-within end))
+                (rmo/cpo-table-backward-end (num)))
+          (action cpo-table () (cpo-table-align ()))
+
+          ;; cpo-table-cell -- table cell object
+          (move cpo-table-cell
+                ((direction expand-region) (inner ,nil))
+                (,(lambda (location-within) (cpo-table-cell-expand-region :position location-within)) (location-within)))
+          (move cpo-table-cell
+                ((direction expand-region) (inner inner))
+                (,(lambda (location-within) (cpo-table-cell-expand-region-inner :position location-within)) (location-within)))
+          (move cpo-table-cell
+                ((direction forward) (location-within beginning) (tree-vertical ,nil))
+                (rmo/cpo-table-cell-forward-beginning (num)))
+          (move cpo-table-cell
+                ((direction backward) (location-within beginning) (tree-vertical ,nil))
+                (rmo/cpo-table-cell-backward-beginning (num)))
+          (move cpo-table-cell
+                ((direction forward) (location-within end) (tree-vertical ,nil))
+                (rmo/cpo-table-cell-forward-end (num)))
+          (move cpo-table-cell
+                ((direction backward) (location-within end) (tree-vertical ,nil))
+                (rmo/cpo-table-cell-backward-end (num)))
+          (move cpo-table-cell
+                ((tree-vertical up) (location-within beginning))
+                (,(lambda (num) (cpo-table-cell-up num :position 'beginning)) (num)))
+          (move cpo-table-cell
+                ((tree-vertical up) (location-within end))
+                (,(lambda (num) (cpo-table-cell-up num :position 'end)) (num)))
+          (move cpo-table-cell
+                ((tree-vertical down) (location-within beginning))
+                (,(lambda (num) (cpo-table-cell-down num :position 'beginning)) (num)))
+          (move cpo-table-cell
+                ((tree-vertical down) (location-within end))
+                (,(lambda (num) (cpo-table-cell-down num :position 'end)) (num)))
+          (move cpo-table-cell
+                ((alternate alternate) (location-within beginning))
+                (cpo-table-cell-beginning-of-content ()))
+          (move cpo-table-cell
+                ((alternate alternate) (location-within end))
+                (cpo-table-cell-end-of-content ()))
+
+          ;; cpo-table-row -- table row object
+          (move cpo-table-row
+                ((direction expand-region) (inner ,nil))
+                (,(lambda (location-within) (cpo-table-row-expand-region :position location-within)) (location-within)))
+          (move cpo-table-row
+                ((direction expand-region) (inner inner))
+                (,(lambda (location-within) (cpo-table-row-expand-region-inner :position location-within)) (location-within)))
+          (move cpo-table-row
+                ((direction forward) (location-within beginning))
+                (,(lambda (num idempotent)
+                    (cpo-table-row-forward-beginning num :idempotent idempotent))
+                 (num idempotent)))
+          (move cpo-table-row
+                ((direction backward) (location-within beginning))
+                (,(lambda (num idempotent)
+                    (cpo-table-row-backward-beginning num :idempotent idempotent))
+                 (num idempotent)))
+          (move cpo-table-row
+                ((direction forward) (location-within end))
+                (,(lambda (num idempotent)
+                    (cpo-table-row-forward-end num :idempotent idempotent))
+                 (num idempotent)))
+          (move cpo-table-row
+                ((direction backward) (location-within end))
+                (,(lambda (num idempotent)
+                    (cpo-table-row-backward-end num :idempotent idempotent))
+                 (num idempotent)))
+          (move cpo-table-column
+                ((direction forward) (location-within beginning))
+                (rmo/cpo-table-cell-forward-beginning (num)))
+          (move cpo-table-column
+                ((direction backward) (location-within beginning))
+                (rmo/cpo-table-cell-backward-beginning (num)))
+          (move cpo-table-column
+                ((direction forward) (location-within end))
+                (rmo/cpo-table-cell-forward-end (num)))
+          (move cpo-table-column
+                ((direction backward) (location-within end))
+                (rmo/cpo-table-cell-backward-end (num)))
+
           ;; TODO - for transpose character, implement something that follows the character explicitly forward/backward.
           (transpose word ((direction forward)) (,(aggreact-make-explicit-command 'cpo-transpose-word-forward) (num)))
           (transpose word ((direction backward)) (,(aggreact-make-explicit-command 'cpo-transpose-word-backward) (num)))
@@ -972,6 +1108,18 @@ at the beginning (no change)."
           (transpose cpo-file-path-object ((direction backward) (alternate ,nil)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-backward) (num)))
           (transpose cpo-file-path-object ((direction forward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-explicit-forward) (num)))
           (transpose cpo-file-path-object ((direction backward) (alternate alternate)) (,(aggreact-make-explicit-command 'cpo-transpose-cpo-file-path-object-explicit-backward) (num)))
+          (transpose cpo-markdown-list ((direction forward)) (,(aggreact-make-explicit-command 'cpo-markdown-list-transpose-sibling-forward) (num)))
+          (transpose cpo-markdown-list ((direction backward)) (,(aggreact-make-explicit-command 'cpo-markdown-list-transpose-sibling-backward) (num)))
+          (transpose cpo-table ((direction forward)) (,(aggreact-make-explicit-command 'cpo-table-transpose-forward) (num)))
+          (transpose cpo-table ((direction backward)) (,(aggreact-make-explicit-command 'cpo-table-transpose-backward) (num)))
+          (transpose cpo-table-cell ((direction forward) (tree-vertical ,nil)) (,(aggreact-make-explicit-command 'cpo-table-cell-transpose-forward) (num)))
+          (transpose cpo-table-cell ((direction backward) (tree-vertical ,nil)) (,(aggreact-make-explicit-command 'cpo-table-cell-transpose-backward) (num)))
+          (transpose cpo-table-cell ((tree-vertical up)) (,(aggreact-make-explicit-command (lambda (count) (cpo-table-cell-transpose count :direction 'up))) (num)))
+          (transpose cpo-table-cell ((tree-vertical down)) (,(aggreact-make-explicit-command (lambda (count) (cpo-table-cell-transpose count :direction 'down))) (num)))
+          (transpose cpo-table-row ((direction forward)) (,(aggreact-make-explicit-command 'cpo-table-row-transpose-forward) (num)))
+          (transpose cpo-table-row ((direction backward)) (,(aggreact-make-explicit-command 'cpo-table-row-transpose-backward) (num)))
+          (transpose cpo-table-column ((direction forward)) (,(aggreact-make-explicit-command 'cpo-table-column-transpose-forward) (num)))
+          (transpose cpo-table-column ((direction backward)) (,(aggreact-make-explicit-command 'cpo-table-column-transpose-backward) (num)))
           (transpose cpo-smartparens ((tree-vertical up)) (cpo-smartparens-ancestor-reorder (num)))
           (transpose cpo-smartparens ((tree-vertical ,nil) (direction forward)) (,(aggreact-make-explicit-command 'cpo-smartparens-transpose-sibling-forward) (num)))
           (transpose cpo-smartparens ((tree-vertical ,nil) (direction backward)) (,(aggreact-make-explicit-command 'cpo-smartparens-transpose-sibling-backward) (num)))
@@ -998,12 +1146,27 @@ at the beginning (no change)."
           (open cpo-indent-tree ((tree-vertical down)) (,(lambda () (message "TODO - implement open cpo-indent-tree child"))))
           (open cpo-comma-list ((direction forward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-comma-list-open-forward)) ()))
           (open cpo-comma-list ((direction backward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-comma-list-open-backward)) ()))
+          (open cpo-markdown-list ((direction forward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-markdown-list-open-forward)) ()))
+          (open cpo-markdown-list ((direction backward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-markdown-list-open-backward)) ()))
+          (open cpo-markdown-list ((direction forward) (tree-vertical down)) (,(lambda (num) (estate-insert-state-with-thunk (lambda () (cpo-markdown-list-open-forward-down :count num)))) (num)))
+          (open cpo-markdown-list ((direction forward) (tree-vertical up)) (,(lambda (num) (estate-insert-state-with-thunk (lambda () (cpo-markdown-list-open-forward-up :count num)))) (num)))
+          (open cpo-table ((direction forward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-open-new)) ()))
+          (open cpo-table-cell ((direction forward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-cell-open-forward)) ()))
+          (open cpo-table-cell ((direction backward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-cell-open-backward)) ()))
+          (open cpo-table-cell ((tree-vertical down)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-cell-open-down)) ()))
+          (open cpo-table-cell ((tree-vertical up)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-cell-open-up)) ()))
+          (open cpo-table-row ((direction forward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-row-open-forward)) ()))
+          (open cpo-table-row ((direction backward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-row-open-backward)) ()))
+          (open cpo-table-column ((direction forward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-column-open-forward)) ()))
+          (open cpo-table-column ((direction backward)) (,(lambda () (estate-insert-state-with-thunk 'cpo-table-column-open-backward)) ()))
           (open cpo-smartparens ((direction forward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-smartparens-open-sibling-forward)) ()))
           (open cpo-smartparens ((direction backward) (tree-vertical ,nil)) (,(lambda () (estate-insert-state-with-thunk 'cpo-smartparens-open-sibling-backward)) ()))
           ;; TODO - symex open - ignore unwrapped forms and open a sibling form with the same paren type, hopefully matching indentation...
 
           (split line () (,(lambda () (open-line 1))))
           (split cpo-smartparens () (sp-split-sexp))
+          (split cpo-table-column ((direction forward)) (,(lambda () (cpo-table-column-split :direction 'forward)) ()))
+          (split cpo-table-column ((direction backward)) (,(lambda () (cpo-table-column-split :direction 'backward)) ()))
           ;; TODO - is there something useful to do for split for outline or indent tree?  For symex or XML it has obvious meaning, but is used in the middle of a thing.  Maybe for outline it means to split the parent on the current header, inserting a new header above at the parent level.  And similar for indent tree.  Need to implement this...
           ;; TODO - split for non-tree objects has reasonably defined meaning, I suppose, but isn't very interesting.
 
@@ -1011,7 +1174,10 @@ at the beginning (no change)."
           (join line ((direction backward)) (,(lambda (count) (dotimes (i count) (join-line))) (num)))
           (join cpo-smartparens ((direction backward)) (cpo-smartparens-join-sexp-backward (num)))
           (join cpo-smartparens ((direction forward)) (cpo-smartparens-join-sexp-forward (num)))
+          (join cpo-table-column ((direction forward)) (,(lambda () (cpo-table-column-join :direction 'forward)) ()))
+          (join cpo-table-column ((direction backward)) (,(lambda () (cpo-table-column-join :direction 'backward)) ()))
           ;; TODO - cpo-smartparens - make a join-sexp function that takes a forward or backward argument
+
 
 
           ;; TODO - optional register for delete to be delete-copy
@@ -1019,6 +1185,12 @@ at the beginning (no change)."
           (delete region
                   ()
                   (cpo-delete (register)))
+          (delete cpo-table-column
+                  (inner inner)
+                  (cpo-table-column-delete ()))
+          (delete cpo-table-column
+                  (inner ,nil)
+                  (cpo-table-column-delete ()))
           (delete ,(lambda (x) (not (memq x '(region))))
                   ()
                   (,(composiphrase--make-movement-delegated-command
